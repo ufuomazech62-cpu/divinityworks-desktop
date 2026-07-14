@@ -437,7 +437,7 @@ export function BuildAssistantSection() {
                     {/* Main Headline */}
                     <div className="text-center mb-16">
                         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-6 leading-tight">
-                            Build <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Rowboats</span> that Work for You
+                            Build <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Assistants</span> that Work for You
                         </h1>
                     </div>
 
@@ -454,7 +454,7 @@ export function BuildAssistantSection() {
                                             <div className="flex-shrink-0">
                                                 <Image
                                                     src={mascotImage}
-                                                    alt="Rowboat Mascot"
+                                                    alt="Divinity Mascot"
                                                     width={200}
                                                     height={200}
                                                     className="w-[200px] h-[200px] object-contain"

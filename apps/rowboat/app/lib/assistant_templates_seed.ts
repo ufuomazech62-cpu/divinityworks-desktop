@@ -23,7 +23,7 @@ export async function ensureLibraryTemplatesSeeded(): Promise<void> {
 
             // Upsert to avoid race-condition duplicates
             const filter = {
-                authorName: "Rowboat",
+                authorName: "Divinity Works",
                 source: 'library',
                 tags: { $all: ["__library__", `prebuilt:${prebuiltKey}`] },
             } as const;
@@ -31,8 +31,8 @@ export async function ensureLibraryTemplatesSeeded(): Promise<void> {
                 name,
                 description: (tpl as any).description || "",
                 category: (tpl as any).category || "Other",
-                authorId: "rowboat-system",
-                authorName: "Rowboat",
+                authorId: "divinityworks-system",
+                authorName: "Divinity Works",
                 authorEmail: undefined,
                 isAnonymous: false,
                 workflow: tpl as any,
@@ -59,7 +59,7 @@ export async function ensureLibraryTemplatesSeeded(): Promise<void> {
         try {
             const libCursor = collection.find({
                 source: 'library',
-                authorName: 'Rowboat',
+                authorName: 'Divinity Works',
                 tags: { $in: ["__library__"] },
             }, { projection: { _id: 1, tags: 1, name: 1, publishedAt: 1 } });
 
@@ -133,7 +133,7 @@ export async function ensureTemplateSeeded(prebuiltKey: string): Promise<void> {
         // Check if already exists
         const existing = await collection.findOne({ 
             name, 
-            authorName: "Rowboat", 
+            authorName: "Divinity Works", 
             tags: { $in: [ `prebuilt:${prebuiltKey}`, "__library__" ] } 
         });
 
@@ -179,8 +179,8 @@ export async function ensureTemplateSeeded(prebuiltKey: string): Promise<void> {
                 name,
                 description: (tpl as any).description || "",
                 category: (tpl as any).category || "Other",
-                authorId: "rowboat-system",
-                authorName: "Rowboat",
+                authorId: "divinityworks-system",
+                authorName: "Divinity Works",
                 authorEmail: undefined,
                 isAnonymous: false,
                 workflow: transformedWorkflow,

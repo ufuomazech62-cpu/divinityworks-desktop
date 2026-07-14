@@ -251,7 +251,7 @@ export function AssistantCard({
                 <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                     <div className="flex items-center gap-2">
                         <span>
-                            {isAnonymous ? 'Anonymous' : (authorName ? (authorName.split(' ')[0] || 'Rowboat') : 'Rowboat')}
+                            {isAnonymous ? 'Anonymous' : (authorName ? (authorName.split(' ')[0] || 'Divinity Works') : 'Divinity Works')}
                         </span>
                         {onDelete && (
                             <button

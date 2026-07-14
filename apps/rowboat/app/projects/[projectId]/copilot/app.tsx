@@ -212,7 +212,7 @@ const App = forwardRef<{ handleCopyChat: () => void; handleUserMessage: (message
                     {messages.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-4 pointer-events-none">
                             {/* Replace Sparkles icon with mascot image */}
-                            <Image src={mascot} alt="Rowboat Mascot" width={160} height={160} className="object-contain mb-3 animate-float" />
+                            <Image src={mascot} alt="Divinity Mascot" width={160} height={160} className="object-contain mb-3 animate-float" />
                             
                             {/* Welcome/Intro Section */}
                             <div className="text-center max-w-md px-6 mb-3">
@@ -223,7 +223,7 @@ const App = forwardRef<{ handleCopyChat: () => void; handleUserMessage: (message
                                     I’m Skipper, your copilot for building agents and adding tools to them.
                                 </p>
                                 <p className="text-base text-zinc-600 dark:text-zinc-400 mb-3 text-center">
-                                    Here&apos;s what you can do in Rowboat:
+                                    Here&apos;s what you can do in Divinity Works:
                                 </p>
                                 <div className="space-y-2 max-w-2xl mx-auto text-left">
                                     <div className="flex items-start gap-3">

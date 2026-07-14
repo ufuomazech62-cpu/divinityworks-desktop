@@ -141,7 +141,7 @@ export default function Sidebar({ projectId, useAuth, collapsed = false, onToggl
     <>
       <aside className={`${collapsed ? 'w-16' : 'w-60'} bg-transparent flex flex-col h-full transition-all duration-300`}>
         <div className="flex flex-col grow">
-          {/* Rowboat Logo */}
+          {/* Divinity Works Logo */}
           <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
             <Tooltip content="Home" showArrow placement="right">
               <Link
@@ -153,13 +153,13 @@ export default function Sidebar({ projectId, useAuth, collapsed = false, onToggl
               >
                 {collapsed && <Image
                   src={logoOnly}
-                  alt="Rowboat"
+                  alt="Divinity Works"
                   width={32}
                   height={32}
                 />}
                 {!collapsed && <Image
                   src={logo}
-                  alt="Rowboat"
+                  alt="Divinity Works"
                   height={32}
                 />}
               </Link>

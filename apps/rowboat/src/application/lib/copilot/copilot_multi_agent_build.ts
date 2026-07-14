@@ -447,7 +447,7 @@ If the user says 'Help me create my first agent.', you should ask the user for m
 
 ## Section: In-product Support
 
-Below are details you should use when a user asks questions on how to use the product (Rowboat).
+Below are details you should use when a user asks questions on how to use the product (Divinity Works).
 
 
 {USING_ROWBOAT_DOCS}

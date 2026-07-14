@@ -294,7 +294,7 @@ function ApiKeysSection({ projectId }: { projectId: string }) {
 
     return <Section 
         title="API Keys"
-        description="API keys are used to authenticate requests to the Rowboat API."
+        description="API keys are used to authenticate requests to the Divinity Works API."
     >
         <div className="space-y-4">
             <div className="flex justify-between items-center">
