@@ -59,7 +59,7 @@ services:
       redis:
         condition: service_started
       qdrant:
-        condition: service_healthy
+        condition: service_started
 
   # Cloudflare Tunnel — the only public ingress
   cloudflared:
@@ -85,11 +85,6 @@ services:
     restart: unless-stopped
     volumes:
       - ./data/qdrant:/data/qdrant
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
-      interval: 5s
-      timeout: 10s
-      retries: 3
 
   # ---- Workers (same as Rowboat) ----
   setup_qdrant:
@@ -100,7 +95,7 @@ services:
     profiles: ["setup_qdrant"]
     depends_on:
       qdrant:
-        condition: service_healthy
+        condition: service_started
     environment:
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_API_KEY=${QDRANT_API_KEY}
