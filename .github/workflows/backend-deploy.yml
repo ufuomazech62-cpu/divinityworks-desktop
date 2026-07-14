@@ -1,0 +1,27 @@
+name: Deploy Divinity Works Backend
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH deploy to Oracle VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_SSH_USER || 'ubuntu' }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/divinityworks-backend
+            git fetch origin main
+            git reset --hard origin/main
+            # .env is provisioned on the VM once (from Cloudflare Secrets Store / deploy/.env)
+            docker compose --profile rag-worker up -d --build
+            docker image prune -f

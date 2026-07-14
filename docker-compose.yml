@@ -1,146 +1,103 @@
-version: '3.8'
-
-volumes:
-  uploads:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/uploads
+# Divinity Works backend stack
+# Runs on the Oracle VM (free tier, us-phoenix-1).
+# Ingress is ONLY via Cloudflare Tunnel — no ports published to the public internet.
+# Secrets come from the .env file (gitignored) or CI secrets. Never commit real values.
 
 services:
-  rowboat:
+  divinityworks:
     build:
       context: ./apps/rowboat
       dockerfile: Dockerfile
-    ports:
-      - "${PORT:-3000}:3000"
+    # intentionally NOT published: only cloudflared reaches this
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - MONGODB_CONNECTION_STRING=mongodb://mongo:27017/rowboat
+      - NODE_ENV=production
+      - PORT=3000
+      # LLM: OpenRouter (OpenAI-compatible). The app reads PROVIDER_*
+      - OPENAI_API_KEY=${PROVIDER_API_KEY}
+      - PROVIDER_API_KEY=${PROVIDER_API_KEY}
+      - PROVIDER_BASE_URL=https://openrouter.ai/api/v1
+      - PROVIDER_DEFAULT_MODEL=tencent/hy3:free
+      - PROVIDER_COPILOT_MODEL=tencent/hy3:free
+      # Database
+      - MONGODB_CONNECTION_STRING=mongodb://mongo:27017/divinityworks
+      # Auth0 + Google social (zero code change vs Rowboat)
       - USE_AUTH=${USE_AUTH}
-      - AUTH0_SECRET=test_secret
-      - AUTH0_BASE_URL=http://localhost:3000
-      - AUTH0_ISSUER_BASE_URL=https://test.com
-      - AUTH0_CLIENT_ID=test
-      - AUTH0_CLIENT_SECRET=test
-      - AGENTS_API_URL=http://rowboat_agents:3001
-      - AGENTS_API_KEY=${AGENTS_API_KEY}
-      - COPILOT_API_URL=http://copilot:3002
-      - COPILOT_API_KEY=${COPILOT_API_KEY}
+      - AUTH0_SECRET=${AUTH0_SECRET}
+      - AUTH0_BASE_URL=${AUTH0_BASE_URL}
+      - AUTH0_ISSUER_BASE_URL=${AUTH0_ISSUER_BASE_URL}
+      - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
+      - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
+      # Cache / pub-sub / quotas
       - REDIS_URL=redis://redis:6379
+      # Vector store (RAG)
       - USE_RAG=${USE_RAG}
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_API_KEY=${QDRANT_API_KEY}
+      # File storage: Cloudflare R2 (S3-compatible)
       - USE_RAG_UPLOADS=${USE_RAG_UPLOADS}
-      - USE_RAG_S3_UPLOADS=${USE_RAG_S3_UPLOADS}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - RAG_UPLOADS_S3_BUCKET=${RAG_UPLOADS_S3_BUCKET}
-      - RAG_UPLOADS_S3_REGION=${RAG_UPLOADS_S3_REGION}
-      - USE_RAG_SCRAPING=${USE_RAG_SCRAPING}
-      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
-      - USE_CHAT_WIDGET=${USE_CHAT_WIDGET}
-      - CHAT_WIDGET_HOST=http://localhost:3006
-      - CHAT_WIDGET_SESSION_JWT_SECRET=${CHAT_WIDGET_SESSION_JWT_SECRET}
-      - MAX_QUERIES_PER_MINUTE=${MAX_QUERIES_PER_MINUTE}
-      - MAX_PROJECTS_PER_USER=${MAX_PROJECTS_PER_USER}
-      - VOICE_API_URL=${VOICE_API_URL}
-      - PROVIDER_API_KEY=${PROVIDER_API_KEY}
-      - PROVIDER_BASE_URL=${PROVIDER_BASE_URL}
-      - PROVIDER_DEFAULT_MODEL=${PROVIDER_DEFAULT_MODEL}
-      - PROVIDER_COPILOT_MODEL=${PROVIDER_COPILOT_MODEL}
+      - USE_RAG_S3_UPLOADS=${USE_RAG_UPLOADS}
+      - AWS_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - AWS_ENDPOINT_URL=https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+      - RAG_UPLOADS_S3_BUCKET=${R2_BUCKET}
+      - RAG_UPLOADS_S3_REGION=auto
       - RAG_UPLOADS_DIR=/app/uploads
-      - USE_KLAVIS_TOOLS=${USE_KLAVIS_TOOLS}
-      - KLAVIS_API_KEY=${KLAVIS_API_KEY}
-      - KLAVIS_GITHUB_CLIENT_ID=${KLAVIS_GITHUB_CLIENT_ID}
-      - KLAVIS_GOOGLE_CLIENT_ID=${KLAVIS_GOOGLE_CLIENT_ID}
-      - USE_BILLING=${USE_BILLING}
+      # Billing (Stripe — your account). Off (guest mode) until wired.
+      - USE_BILLING=${USE_BILLING:-false}
       - BILLING_API_URL=${BILLING_API_URL}
       - BILLING_API_KEY=${BILLING_API_KEY}
-      - USE_COMPOSIO_TOOLS=${USE_COMPOSIO_TOOLS}
-      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
-      - COMPOSIO_TRIGGERS_WEBHOOK_SECRET=${COMPOSIO_TRIGGERS_WEBHOOK_SECRET}
+      # Misc
+      - MAX_QUERIES_PER_MINUTE=${MAX_QUERIES_PER_MINUTE:-60}
+      - MAX_PROJECTS_PER_USER=${MAX_PROJECTS_PER_USER:-10}
+      - USE_CHAT_WIDGET=${USE_CHAT_WIDGET:-false}
     restart: unless-stopped
     volumes:
       - uploads:/app/uploads
+    depends_on:
+      mongo:
+        condition: service_started
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_healthy
 
-  # rowboat_agents:
-  #   build:
-  #     context: ./apps/rowboat_agents
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3001:3001"
-  #   environment:
-  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
-  #     - API_KEY=${AGENTS_API_KEY}
-  #     - REDIS_URL=redis://redis:6379
-  #     - MONGODB_URI=mongodb://mongo:27017/rowboat
-  #     - QDRANT_URL=http://qdrant:6333
-  #     - QDRANT_API_KEY=${QDRANT_API_KEY}
-  #     - PROVIDER_BASE_URL=${PROVIDER_BASE_URL}
-  #     - PROVIDER_API_KEY=${PROVIDER_API_KEY}
-  #     - PROVIDER_DEFAULT_MODEL=${PROVIDER_DEFAULT_MODEL}
-  #     - MAX_CALLS_PER_CHILD_AGENT=${MAX_CALLS_PER_CHILD_AGENT}
-  #     - ENABLE_TRACING=${ENABLE_TRACING}
-  #   restart: unless-stopped
+  # Cloudflare Tunnel — the only public ingress
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TUNNEL_TOKEN}
+    restart: unless-stopped
 
-  # copilot:
-  #   build:
-  #     context: ./apps/copilot
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3002:3002"
-  #   environment:
-  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
-  #     - API_KEY=${COPILOT_API_KEY}
-  #     - PROVIDER_BASE_URL=${PROVIDER_BASE_URL}
-  #     - PROVIDER_API_KEY=${PROVIDER_API_KEY}
-  #     - PROVIDER_DEFAULT_MODEL=${PROVIDER_DEFAULT_MODEL}
-  #     - PROVIDER_COPILOT_MODEL=${PROVIDER_COPILOT_MODEL}
-  #   restart: unless-stopped
+  # ---- Data tier (internal only) ----
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - ./data/mongo:/data/db
 
-  # tools_webhook:
-  #   build:
-  #     context: ./apps/experimental/tools_webhook
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3005:3005"
-  #   environment:
-  #     - SIGNING_SECRET=${SIGNING_SECRET}
-  #   restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
 
-  # simulation_runner:
-  #   build:
-  #     context: ./apps/experimental/simulation_runner
-  #     dockerfile: Dockerfile
-  #   environment:
-  #     - MONGODB_URI=mongodb://mongo:27017/rowboat
-  #     - ROWBOAT_API_HOST=http://rowboat:3000
-  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
-  #   restart: unless-stopped
+  qdrant:
+    image: qdrant/qdrant:latest
+    environment:
+      - QDRANT__STORAGE__STORAGE_PATH=/data/qdrant
+    restart: unless-stopped
+    volumes:
+      - ./data/qdrant:/data/qdrant
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
 
+  # ---- Workers (same as Rowboat) ----
   setup_qdrant:
     build:
       context: ./apps/rowboat
       dockerfile: scripts.Dockerfile
     command: ["sh", "-c", "npm run setupQdrant"]
-    profiles: [ "setup_qdrant" ]
-    depends_on:
-      qdrant:
-        condition: service_healthy
-    environment:
-      - QDRANT_URL=http://qdrant:6333
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - EMBEDDING_VECTOR_SIZE=${EMBEDDING_VECTOR_SIZE}
-    restart: no
-
-  delete_qdrant:
-    build:
-      context: ./apps/rowboat
-      dockerfile: scripts.Dockerfile
-    command: ["sh", "-c", "npm run deleteQdrant"]
-    profiles: [ "delete_qdrant" ]
+    profiles: ["setup_qdrant"]
     depends_on:
       qdrant:
         condition: service_healthy
@@ -154,25 +111,24 @@ services:
       context: ./apps/rowboat
       dockerfile: scripts.Dockerfile
     command: ["npm", "run", "rag-worker"]
-    profiles: [ "rag-worker" ]
+    profiles: ["rag-worker"]
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - RAG_UPLOADS_S3_BUCKET=${RAG_UPLOADS_S3_BUCKET}
-      - RAG_UPLOADS_S3_REGION=${RAG_UPLOADS_S3_REGION}
+      - AWS_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - AWS_ENDPOINT_URL=https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+      - RAG_UPLOADS_S3_BUCKET=${R2_BUCKET}
+      - RAG_UPLOADS_S3_REGION=auto
       - RAG_UPLOADS_DIR=/app/uploads
-      - USE_GEMINI_FILE_PARSING=${USE_GEMINI_FILE_PARSING}
-      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - EMBEDDING_PROVIDER_BASE_URL=${EMBEDDING_PROVIDER_BASE_URL}
-      - EMBEDDING_PROVIDER_API_KEY=${EMBEDDING_PROVIDER_API_KEY}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
-      - MONGODB_CONNECTION_STRING=mongodb://mongo:27017/rowboat
+      - OPENAI_API_KEY=${PROVIDER_API_KEY}
+      - PROVIDER_API_KEY=${PROVIDER_API_KEY}
+      - PROVIDER_BASE_URL=https://openrouter.ai/api/v1
+      - PROVIDER_DEFAULT_MODEL=tencent/hy3:free
+      - MONGODB_CONNECTION_STRING=mongodb://mongo:27017/divinityworks
       - REDIS_URL=redis://redis:6379
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - USE_BILLING=${USE_BILLING}
+      - USE_BILLING=${USE_BILLING:-false}
       - BILLING_API_URL=${BILLING_API_URL}
       - BILLING_API_KEY=${BILLING_API_KEY}
     restart: unless-stopped
@@ -185,84 +141,24 @@ services:
       dockerfile: scripts.Dockerfile
     command: ["npm", "run", "jobs-worker"]
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - MONGODB_CONNECTION_STRING=mongodb://mongo:27017/rowboat
+      - OPENAI_API_KEY=${PROVIDER_API_KEY}
+      - PROVIDER_API_KEY=${PROVIDER_API_KEY}
+      - PROVIDER_BASE_URL=https://openrouter.ai/api/v1
+      - PROVIDER_DEFAULT_MODEL=tencent/hy3:free
+      - PROVIDER_COPILOT_MODEL=tencent/hy3:free
+      - MONGODB_CONNECTION_STRING=mongodb://mongo:27017/divinityworks
       - REDIS_URL=redis://redis:6379
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - PROVIDER_API_KEY=${PROVIDER_API_KEY}
-      - PROVIDER_BASE_URL=${PROVIDER_BASE_URL}
-      - PROVIDER_DEFAULT_MODEL=${PROVIDER_DEFAULT_MODEL}
-      - PROVIDER_COPILOT_MODEL=${PROVIDER_COPILOT_MODEL}
-      - USE_BILLING=${USE_BILLING}
+      - USE_BILLING=${USE_BILLING:-false}
       - BILLING_API_URL=${BILLING_API_URL}
       - BILLING_API_KEY=${BILLING_API_KEY}
-      - USE_COMPOSIO_TOOLS=${USE_COMPOSIO_TOOLS}
-      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
     restart: unless-stopped
 
-  # chat_widget:
-  #   build:
-  #     context: ./apps/experimental/chat_widget
-  #     dockerfile: Dockerfile
-  #   profiles: [ "chat_widget" ]
-  #   ports:
-  #     - "3006:3006"
-  #   environment:
-  #     - PORT=3006
-  #     - CHAT_WIDGET_HOST=http://localhost:3006
-  #     - ROWBOAT_HOST=http://localhost:3000
-  #   restart: unless-stopped
-
-  mongo:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    restart: unless-stopped
-    attach: false
-    volumes:
-      - ./data/mongo:/data/db
-
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-
-  docs:
-    build:
-      context: ./apps/docs
-      dockerfile: Dockerfile
-    profiles: [ "docs" ]
-    ports:
-      - "8000:8000"
-
-  # twilio_handler:
-  #   build:
-  #     context: ./apps/experimental/twilio_handler
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "4010:4010"
-  #   environment:
-  #     - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
-  #     - ROWBOAT_API_HOST=http://rowboat:3000
-  #     - MONGODB_URI=mongodb://mongo:27017/rowboat
-  #   restart: unless-stopped
-
-  qdrant:
-    build:
-      context: .
-      dockerfile: Dockerfile.qdrant
-    ports:
-      - "6333:6333"
-    environment:
-      - QDRANT__STORAGE__STORAGE_PATH=/data/qdrant
-    restart: unless-stopped
-    profiles: [ "qdrant" ]
-    volumes:
-      - ./data/qdrant:/data/qdrant
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
-      interval: 5s
-      timeout: 10s
-      retries: 3
+volumes:
+  uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/uploads

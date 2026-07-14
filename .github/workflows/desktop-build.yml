@@ -1,0 +1,37 @@
+name: Build Divinity Works Desktop
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop app
+        run: pnpm --filter divinity build
+
+      - name: Package desktop app
+        run: pnpm --filter divinity make
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: divinity-desktop-windows
+          path: apps/x/out/make/**/*
+          if-no-files-found: warn
