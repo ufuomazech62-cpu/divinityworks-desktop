@@ -166,11 +166,6 @@ function normalizeCalEvent(raw: RawCalEvent, sourcePath: string): CalEvent | nul
   }
 }
 
-function noteLabel(node: TreeNode): string {
-  if (node.kind === 'file' && node.name.toLowerCase().endsWith('.md')) return node.name.slice(0, -3)
-  return node.name
-}
-
 function triggerMeetingCapture(event: CalEvent, openConference: boolean) {
   window.__pendingCalendarEvent = {
     summary: event.summary,
@@ -190,17 +185,12 @@ function triggerMeetingCapture(event: CalEvent, openConference: boolean) {
 const CARD = 'rounded-xl border border-border bg-card p-4'
 
 export function HomeView({
-  tree,
-  runs,
   bgTaskSummaries,
   onOpenEmail,
   onOpenMeetings,
   onOpenAgents,
   onOpenAgent,
-  onOpenNote,
-  onOpenRun,
   onTakeMeetingNotes,
-  onOpenChat,
   onPrefillChat,
 }: HomeViewProps) {
   const [events, setEvents] = useState<CalEvent[]>([])
@@ -293,33 +283,6 @@ export function HomeView({
       Math.max(t(b.lastRunAt), t(b.lastAttemptAt)) - Math.max(t(a.lastRunAt), t(a.lastAttemptAt)),
     )[0]
   }, [bgTaskSummaries])
-
-  const recentNotes = useMemo<TreeNode[]>(() => {
-    const out: TreeNode[] = []
-    const walk = (nodes: TreeNode[]) => {
-      for (const n of nodes) {
-        if (n.path === 'knowledge/Meetings' || n.path === 'knowledge/Workspace') continue
-        if (n.kind === 'file') out.push(n)
-        else if (n.children?.length) walk(n.children)
-      }
-    }
-    walk(tree)
-    return out
-      .filter((n) => n.stat?.mtimeMs)
-      .sort((a, b) => (b.stat?.mtimeMs ?? 0) - (a.stat?.mtimeMs ?? 0))
-      .slice(0, 2)
-  }, [tree])
-
-  const recentActivity = useMemo(() => {
-    const items: Array<{ key: string; icon: 'note' | 'chat'; label: string; kind: string; when: number; open: () => void }> = []
-    for (const n of recentNotes) {
-      items.push({ key: `n:${n.path}`, icon: 'note', label: noteLabel(n), kind: 'note', when: n.stat?.mtimeMs ?? 0, open: () => onOpenNote(n.path) })
-    }
-    for (const r of runs.slice(0, 4)) {
-      items.push({ key: `r:${r.id}`, icon: 'chat', label: r.title || '(Untitled chat)', kind: 'chat', when: new Date(r.createdAt).getTime() || 0, open: () => onOpenRun(r.id) })
-    }
-    return items.sort((a, b) => b.when - a.when).slice(0, 4)
-  }, [recentNotes, runs, onOpenNote, onOpenRun])
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-muted/30">

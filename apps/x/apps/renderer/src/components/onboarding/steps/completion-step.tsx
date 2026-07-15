@@ -7,8 +7,6 @@ interface CompletionStepProps {
   state: OnboardingState
 }
 
-const zeroLevel = () => 0
-
 export function CompletionStep({ state }: CompletionStepProps) {
   const { connectedProviders, gmailConnected, googleCalendarConnected, handleComplete } = state
   const hasConnections = connectedProviders.length > 0 || gmailConnected || googleCalendarConnected

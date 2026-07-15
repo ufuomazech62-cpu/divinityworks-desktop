@@ -20,7 +20,6 @@ const ORB_DARK = '#6D5BD0'
 const ORB_LIGHT = '#B9AEF4'
 const WAND_SHAFT = '#C4B5FD'
 const STAR_FILL = '#F5D77A'
-const HALO = '#C4B5FD'
 const GLOW = '#A78BFA'
 const MOUTH_FILL = '#2E2A55'
 
