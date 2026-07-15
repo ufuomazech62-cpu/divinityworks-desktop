@@ -37,7 +37,7 @@ class SessionManager {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-client-id': window.ROWBOAT_CONFIG.clientId
+          'x-client-id': window.DIVINITY_WORKS_CONFIG.clientId
         },
       });
       

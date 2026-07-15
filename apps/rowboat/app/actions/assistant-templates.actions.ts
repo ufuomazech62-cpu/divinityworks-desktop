@@ -215,7 +215,7 @@ export async function deleteAssistantTemplate(id: string) {
     }
 
     // Disallow deleting library/prebuilt items
-    if ((item as any).source === 'library' || item.authorId === 'rowboat-system') {
+    if ((item as any).source === 'library' || item.authorId === 'divinityworks-system') {
         throw new Error('Not allowed to delete this template');
     }
 

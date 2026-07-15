@@ -251,7 +251,7 @@ export function ChatWidgetSection({
 
     const code = `<!-- Divinity Works Chat Widget -->
 <script>
-    window.ROWBOAT_CONFIG = {
+    window.DIVINITY_WORKS_CONFIG = {
         clientId: '${chatClientId}'
     };
     (function(d) {

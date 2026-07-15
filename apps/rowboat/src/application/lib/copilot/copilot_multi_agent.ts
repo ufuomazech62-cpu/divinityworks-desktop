@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { COPILOT_INSTRUCTIONS_MULTI_AGENT } from './copilot_multi_agent_build';
 
-function findUsingRowboatDocsDir(): string | null {
+function findUsingDivinityWorksDocsDir(): string | null {
   const candidates = [
     path.resolve(process.cwd(), '../docs/docs/using-rowboat'),
     path.resolve(process.cwd(), 'apps/docs/docs/using-rowboat'),
@@ -62,7 +62,7 @@ function extractOverview(body: string): string {
 }
 
 function collectDocsSummaries(): string {
-  const dir = findUsingRowboatDocsDir();
+  const dir = findUsingDivinityWorksDocsDir();
   if (!dir) return '';
 
   const entries: string[] = [];
@@ -99,8 +99,8 @@ function collectDocsSummaries(): string {
   return `\n\nAdditional Reference (auto-loaded from docs):\n${items.join('\n\n')}\n`;
 }
 
-const USING_ROWBOAT_DOCS = collectDocsSummaries();
+const USING_DIVINITY_WORKS_DOCS = collectDocsSummaries();
 
 // Inject auto-loaded docs, if available
 export const COPILOT_INSTRUCTIONS_MULTI_AGENT_WITH_DOCS =
-  COPILOT_INSTRUCTIONS_MULTI_AGENT.replace('{USING_ROWBOAT_DOCS}', USING_ROWBOAT_DOCS);
+  COPILOT_INSTRUCTIONS_MULTI_AGENT.replace('{USING_DIVINITY_WORKS_DOCS}', USING_DIVINITY_WORKS_DOCS);
