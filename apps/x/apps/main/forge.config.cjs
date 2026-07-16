@@ -2,6 +2,10 @@
 // NOTE: Must be .cjs (CommonJS) because package.json has "type": "module"
 // Forge loads configs with require(), which fails on ESM files
 
+// Default Electron Forge output directory. (Was temporarily redirected to out2 to
+// dodge a Windows Defender lock on out/; the lock cleared, so it's back to 'out'.)
+const FORGE_OUT = 'out';
+
 const path = require('path');
 const pkg = require('./package.json');
 
@@ -190,6 +194,7 @@ function verifyAcpStaging(mainDir, placements) {
 }
 
 module.exports = {
+    out: FORGE_OUT,
     packagerConfig: {
         executableName: 'divinity',
         icon: './icons/icon',  // .icns extension added automatically

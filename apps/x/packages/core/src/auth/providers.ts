@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { getRowboatConfig } from '../config/rowboat.js';
+import { DIVINITY_AUTH0_DOMAIN, DIVINITY_AUTH0_CLIENT_ID } from '../config/env.js';
 
 /**
  * Discovery configuration - how to get OAuth endpoints
@@ -107,11 +107,20 @@ export async function getProviderConfig(providerName: string): Promise<ProviderC
     throw new Error(`Unknown OAuth provider: ${providerName}`);
   }
   if (providerName === 'rowboat') {
-    const rowboatConfig = await getRowboatConfig();
+    // "Sign in with Divinity" uses our Auth0 tenant directly (OIDC, public client
+    // + PKCE). This replaces the original Rowboat/Supabase managed-auth issuer, so
+    // the desktop no longer depends on the backend's `/v1/config` (which referenced
+    // the Supabase issuer) to build the OAuth configuration. Auth0 serves its
+    // discovery and token endpoints at well-known paths, so we use static endpoints
+    // (no `.well-known` fetch, no Dynamic Client Registration).
     config.discovery = {
-      mode: 'issuer',
-      issuer: `${rowboatConfig.supabaseUrl}/auth/v1/.well-known/oauth-authorization-server`,
-    }
+      mode: 'static',
+      authorizationEndpoint: `https://${DIVINITY_AUTH0_DOMAIN}/authorize`,
+      tokenEndpoint: `https://${DIVINITY_AUTH0_DOMAIN}/oauth/token`,
+      revocationEndpoint: `https://${DIVINITY_AUTH0_DOMAIN}/oauth/revoke`,
+    };
+    config.client = { mode: 'static', clientId: DIVINITY_AUTH0_CLIENT_ID };
+    config.scopes = ['openid', 'email', 'profile'];
   }
   return config;
 }
