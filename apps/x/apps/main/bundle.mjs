@@ -54,8 +54,22 @@ await esbuild.build({
 // package dir and copy only what's needed at runtime (compiled JS + prebuilt
 // binaries). The macOS spawn-helper must be executable — pnpm extraction drops
 // the bit, and a non-executable helper makes every PTY spawn fail.
-const here = path.dirname(fileURLToPath(import.meta.url));
-const ptySrc = fs.realpathSync(path.join(here, 'node_modules', 'node-pty'));
+	const here = path.dirname(fileURLToPath(import.meta.url));
+	// Resolve node-pty across pnpm layouts: with `node-linker=hoisted` it
+	// lands at the workspace root node_modules; with isolated linking it's a
+	// symlink inside apps/main/node_modules. Walk up to find it.
+	function findPtyDir(start) {
+	  let dir = start;
+	  for (let i = 0; i < 8; i++) {
+	    const candidate = path.join(dir, 'node_modules', 'node-pty');
+	    if (fs.existsSync(candidate)) return fs.realpathSync(candidate);
+	    const parent = path.dirname(dir);
+	    if (parent === dir) break;
+	    dir = parent;
+	  }
+	  throw new Error(`node-pty not found under ${start}`);
+	}
+	const ptySrc = findPtyDir(here);
 const ptyDest = path.join(here, '.package', 'node_modules', 'node-pty');
 fs.rmSync(ptyDest, { recursive: true, force: true });
 fs.mkdirSync(ptyDest, { recursive: true });
