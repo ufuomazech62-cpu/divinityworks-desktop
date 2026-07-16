@@ -100,15 +100,38 @@ jobs:
     needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
+          run-id: ${{ github.run_id }}
           path: artifacts
+      - name: Ensure tag exists
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG="v0.1.0"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists"
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "Created and pushed tag $TAG"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || 'v0.1.0' }}
+          name: Divinity Desktop v0.1.0
           files: artifacts/**/*
           fail_on_unmatched_files: false
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
