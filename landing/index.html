@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Divinity Works — Your AI coworker with memory</title>
+  <meta name="description" content="Divinity Works is a desktop AI agent with memory, built for private, local-first work. Download for macOS, Windows, and Linux." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <header class="nav">
+    <div class="nav__inner">
+      <a class="brand" href="/">
+        <span class="brand__mark" aria-hidden="true">◇</span>
+        <span class="brand__name">Divinity<span class="brand__sub">Works</span></span>
+      </a>
+      <nav class="nav__links">
+        <a href="#features">Features</a>
+        <a href="#download">Download</a>
+        <a href="https://github.com/ufuomazech62-cpu/divinityworks-desktop" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero__inner">
+        <p class="eyebrow">Private · Local-first · With memory</p>
+        <h1 class="hero__title">Your AI coworker,<br />that actually remembers.</h1>
+        <p class="hero__lede">
+          Divinity Works runs on your machine and learns your work. No vendor lock-in,
+          no surprise permissions — just a focused AI partner for everything you do.
+        </p>
+        <div class="hero__cta">
+          <a class="btn btn--primary" href="#download">Download for free</a>
+          <a class="btn btn--ghost" href="https://github.com/ufuomazech62-cpu/divinityworks-desktop" target="_blank" rel="noopener">View source</a>
+        </div>
+        <p class="hero__note">Free while in preview. macOS, Windows, and Linux.</p>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <div class="features__inner">
+        <article class="feature">
+          <div class="feature__icon" aria-hidden="true">🧠</div>
+          <h3>Memory that sticks</h3>
+          <p>Divinity remembers context across sessions so you never re-explain yourself.</p>
+        </article>
+        <article class="feature">
+          <div class="feature__icon" aria-hidden="true">🔒</div>
+          <h3>Yours to keep</h3>
+          <p>Your data stays on your computer. We host only what you explicitly choose to sync.</p>
+        </article>
+        <article class="feature">
+          <div class="feature__icon" aria-hidden="true">⚡</div>
+          <h3>Fast, local-first</h3>
+          <p>A native desktop app that launches instantly and stays responsive, even offline.</p>
+        </article>
+        <article class="feature">
+          <div class="feature__icon" aria-hidden="true">🔌</div>
+          <h3>Connects to your tools</h3>
+          <p>Plug into the services you already use. Your account, your keys, your rules.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="download" class="download">
+      <div class="download__inner">
+        <h2>Get Divinity Works</h2>
+        <p class="download__sub">Choose your platform. We'll take you to the latest build.</p>
+        <div class="os-grid">
+          <a class="os-card" href="https://github.com/ufuomazech62-cpu/divinityworks-desktop/releases/latest/download/Divinity-win32-x64-0.1.0-setup.exe" id="dl-win">
+            <span class="os-card__icon" aria-hidden="true">⊞</span>
+            <span class="os-card__name">Windows</span>
+            <span class="os-card__meta">.exe · Windows 10+</span>
+          </a>
+          <a class="os-card" href="https://github.com/ufuomazech62-cpu/divinityworks-desktop/releases/latest" id="dl-mac">
+            <span class="os-card__icon" aria-hidden="true">◉</span>
+            <span class="os-card__name">macOS</span>
+            <span class="os-card__meta">.dmg · Apple Silicon &amp; Intel</span>
+          </a>
+          <a class="os-card" href="https://github.com/ufuomazech62-cpu/divinityworks-desktop/releases/latest" id="dl-linux">
+            <span class="os-card__icon" aria-hidden="true">⛬</span>
+            <span class="os-card__name">Linux</span>
+            <span class="os-card__meta">.deb / .rpm · x64</span>
+          </a>
+        </div>
+        <p class="download__alt">
+          All versions and release notes are on the
+          <a href="https://github.com/ufuomazech62-cpu/divinityworks-desktop/releases" target="_blank" rel="noopener">releases page</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span>© <span id="year"></span> Divinity Works</span>
+      <span class="footer__links">
+        <a href="https://github.com/ufuomazech62-cpu/divinityworks-desktop" target="_blank" rel="noopener">GitHub</a>
+      </span>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
