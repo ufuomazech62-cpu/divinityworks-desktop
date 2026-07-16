@@ -70,6 +70,20 @@ await esbuild.build({
 	  throw new Error(`node-pty not found under ${start}`);
 	}
 	const ptySrc = findPtyDir(here);
+
+// Same hoisted-layout handling for any workspace dependency that must be read
+// from disk (not bundled) at package time. agent-slack lives next to node-pty.
+function findModuleDir(start, name) {
+  let dir = start;
+  for (let i = 0; i < 8; i++) {
+    const candidate = path.join(dir, 'node_modules', name);
+    if (fs.existsSync(candidate)) return fs.realpathSync(candidate);
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error(`${name} not found under ${start}`);
+}
 const ptyDest = path.join(here, '.package', 'node_modules', 'node-pty');
 fs.rmSync(ptyDest, { recursive: true, force: true });
 fs.mkdirSync(ptyDest, { recursive: true });
@@ -110,11 +124,12 @@ console.log('✅ node-pty staged in .package/node_modules');
 // ELECTRON_RUN_AS_NODE=1), so it must exist as a real file on disk — it can't
 // be inlined into main.cjs. Bundling here means the packaged app needs neither
 // node_modules nor a global npm install.
+const agentSlackDir = findModuleDir(here, 'agent-slack');
 const agentSlackPkg = JSON.parse(
-  await readFile(new URL('./node_modules/agent-slack/package.json', import.meta.url), 'utf8'),
+  await readFile(path.join(agentSlackDir, 'package.json'), 'utf8'),
 );
 await esbuild.build({
-  entryPoints: ['./node_modules/agent-slack/dist/index.js'],
+  entryPoints: [path.join(agentSlackDir, 'dist', 'index.js')],
   bundle: true,
   platform: 'node',
   target: 'node22',
