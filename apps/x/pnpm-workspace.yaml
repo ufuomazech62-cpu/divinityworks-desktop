@@ -38,3 +38,7 @@ onlyBuiltDependencies:
   - fs-xattr
   - macos-alias
   - protobufjs
+
+# Electron Forge requires hoisted node_modules linking (can't follow pnpm's
+# symlink store). pnpm 11 reads nodeLinker from the workspace file.
+nodeLinker: hoisted
