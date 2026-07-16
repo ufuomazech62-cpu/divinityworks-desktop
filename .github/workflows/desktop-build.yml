@@ -29,8 +29,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build desktop app
-        run: pnpm --filter divinity build
+      - name: Build workspace deps (shared, core, preload)
+        run: pnpm run deps
       - name: Package desktop app
         run: pnpm --filter divinity make
       - name: Upload artifacts
@@ -55,8 +55,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build desktop app
-        run: pnpm --filter divinity build
+      - name: Build workspace deps (shared, core, preload)
+        run: pnpm run deps
       - name: Package desktop app
         run: pnpm --filter divinity make
       - name: Upload artifacts
@@ -81,8 +81,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build desktop app
-        run: pnpm --filter divinity build
+      - name: Build workspace deps (shared, core, preload)
+        run: pnpm run deps
       - name: Package desktop app
         run: pnpm --filter divinity make
       - name: Upload artifacts
