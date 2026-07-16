@@ -45,6 +45,8 @@ jobs:
     defaults:
       run:
         working-directory: apps/x
+    env:
+      ROWBOAT_SKIP_CODE_SIGNING: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
