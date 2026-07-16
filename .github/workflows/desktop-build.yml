@@ -37,7 +37,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: divinity-desktop-windows
-          path: apps/x/out/make/**/*
+          path: apps/x/apps/main/out/make/**/*
           if-no-files-found: warn
 
   build-macos:
@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: divinity-desktop-macos
-          path: apps/x/out/make/**/*
+          path: apps/x/apps/main/out/make/**/*
           if-no-files-found: warn
 
   build-linux:
@@ -93,7 +93,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: divinity-desktop-linux
-          path: apps/x/out/make/**/*
+          path: apps/x/apps/main/out/make/**/*
           if-no-files-found: warn
 
   release:
