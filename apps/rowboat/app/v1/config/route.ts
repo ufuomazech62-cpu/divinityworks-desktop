@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   return NextResponse.json({
-    appUrl: process.env.APP_PUBLIC_URL || "https://api.divinityworks.ai",
+    appUrl: process.env.APP_PUBLIC_URL || "https://api.divinityworks.space",
     websocketApiUrl: process.env.WEBSOCKET_API_URL || "",
     supabaseUrl: process.env.AUTH0_ISSUER_BASE_URL || "",
     billing: { plans: [] },
