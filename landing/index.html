@@ -3,30 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Divinity Works — Your AI coworker that runs your computer</title>
-  <meta name="description" content="Divinity Works is an AI coworker with its own built-in browser. Log in once and it remembers you, learns your work, and runs your workflows on your computer. Download for macOS, Windows, and Linux." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <title>Divinity Works — Your AI Coworker</title>
+  <meta name="description" content="Divinity is an AI coworker with memory, action, and its own browser. It connects to your email, calendar, meetings, and tools to build a living memory of your work — and gets work done across your apps and the web." />
+  <link rel="icon" href="assets/favicon.png" type="image/png" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 </head>
 <body>
   <header class="nav">
     <div class="nav__inner">
-      <a class="brand" href="/" aria-label="Divinity Works home">
-        <svg class="brand__mark" width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <path d="M16 2 L29 16 L16 30 L3 16 Z" fill="url(#dg)"/>
-          <path d="M16 9 L23 16 L16 23 L9 16 Z" fill="#fff" fill-opacity="0.92"/>
-          <defs>
-            <linearGradient id="dg" x1="3" y1="2" x2="29" y2="30" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#6d5efc"/><stop offset="1" stop-color="#19c3a6"/>
-            </linearGradient>
-          </defs>
-        </svg>
+      <a class="brand" href="/" aria-label="Divinity Works">
+        <img class="brand__mark" src="assets/logo-only.png" alt="Divinity" width="28" height="28" />
         <span class="brand__name">Divinity<span class="brand__sub">Works</span></span>
       </a>
       <nav class="nav__links">
         <a href="#how">How it works</a>
-        <a href="#features">Why Divinity</a>
+        <a href="#why">Why Divinity</a>
+        <a href="#usecases">Use cases</a>
         <a class="nav__cta" href="#download">Download</a>
       </nav>
     </div>
@@ -35,71 +27,108 @@
   <main>
     <section class="hero">
       <div class="hero__inner">
-        <span class="eyebrow">Your AI coworker · lives on your computer</span>
-        <h1 class="hero__title">An AI coworker with a mind<br />and a browser of its own.</h1>
+        <h1 class="hero__title">AI coworker with memory,<br />action, and its own browser.</h1>
         <p class="hero__lede">
-          Divinity Works runs on your computer and actually does the work — it has its own
-          built-in browser, clicks, types, and moves through your apps for you. Log in once and
-          it remembers you, learns how you like things done, and quietly runs your daily workflows
-          while you do literally anything else.
+          Divinity connects to your email, calendar, meetings, and tools to build a living memory of
+          your work. It understands your projects, knows what needs attention, and gets work done
+          across your apps and the web.
         </p>
         <div class="hero__cta">
-          <a class="btn btn--primary" href="#download">Download free</a>
-          <a class="btn btn--ghost" href="#how">See how it works</a>
+          <a class="btn btn--primary" href="#download">Download Now</a>
+          <a class="btn btn--ghost" href="#usecases">See Use Cases</a>
         </div>
-        <p class="hero__note">Free in preview · macOS, Windows &amp; Linux · No card, no setup</p>
-      </div>
-    </section>
+        <p class="hero__note">macOS, Windows &amp; Linux</p>
 
-    <section class="live">
-      <div class="live__inner">
-        <span class="live__dot" aria-hidden="true"></span>
-        <p class="live__text">Divinity is <strong>live now</strong> — download the app and sign in to put your coworker to work.</p>
+        <!-- Product window mockup: the coworker actually doing work -->
+        <div class="window" aria-hidden="true">
+          <div class="window__bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="window__title">Divinity</span>
+          </div>
+          <div class="window__body">
+            <div class="chat">
+              <div class="msg msg--user">Pull last week's deals and draft follow-ups for the three that went quiet.</div>
+              <div class="msg msg--ai">
+                <span class="ai__head"><img src="assets/logo-only.png" alt="" width="16" height="16" /> Divinity</span>
+                Working. I opened your CRM in my browser, scanned the three stalled deals, and drafted personalized follow-ups.
+                <div class="chips">
+                  <span class="chip">Drafted 3 emails</span>
+                  <span class="chip">Scheduled sends</span>
+                  <span class="chip">Logged to memory</span>
+                </div>
+              </div>
+              <div class="msg msg--ai msg--typing"><span></span><span></span><span></span></div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
     <section id="how" class="how">
       <div class="how__inner">
-        <h2 class="section__title">It works like a real coworker.</h2>
-        <div class="steps">
-          <div class="step">
-            <span class="step__num">1</span>
-            <h3>Log in once</h3>
-            <p>Sign in and Divinity instantly becomes yours. Nothing to configure, nothing to connect by hand.</p>
-          </div>
-          <div class="step">
-            <span class="step__num">2</span>
-            <h3>It remembers you</h3>
-            <p>It learns your context, your tools, and how you work — so you never start from zero again.</p>
-          </div>
-          <div class="step">
-            <span class="step__num">3</span>
-            <h3>It runs the work</h3>
-            <p>With its own built-in browser, Divinity opens pages, fills forms, and drives your apps to finish tasks on autopilot.</p>
-          </div>
+        <h2 class="section__title">How Divinity Works</h2>
+        <div class="blocks">
+          <article class="block">
+            <h3>Remembers Your Work</h3>
+            <p>Divinity builds a living memory from your emails, meetings, conversations, documents, and projects. It keeps the important context behind your work organized, searchable, and ready whenever you need it.</p>
+          </article>
+          <article class="block">
+            <h3>Creates What You Need</h3>
+            <p>Turn ideas into finished work faster. Divinity helps create emails, presentations, slides, documents, reports, spreadsheets, research summaries, meeting briefs, and other content using the context it already understands.</p>
+          </article>
+          <article class="block">
+            <h3>Takes Action For You</h3>
+            <p>Divinity uses its own browser to work across your apps and the web. It can complete tasks, update information, handle forms, follow workflows, and keep things moving without constant manual effort.</p>
+          </article>
+          <article class="block">
+            <h3>Learns How You Work</h3>
+            <p>Over time, Divinity becomes more personalized to your workflow. It learns your preferences, writing style, projects, and the way you get things done.</p>
+          </article>
         </div>
       </div>
     </section>
 
-    <section id="features" class="features">
-      <div class="features__inner">
-        <h2 class="section__title">Why Divinity Works</h2>
-        <div class="feature-grid">
-          <article class="feature">
-            <h3>A browser that works itself</h3>
-            <p>Divinity has its own built-in browser. It visits sites, reads them, and takes action — no copy-paste, no tab-wrangling for you.</p>
+    <section id="why" class="why">
+      <div class="why__inner">
+        <h2 class="section__title">Why Professionals Choose Divinity</h2>
+        <ul class="checklist">
+          <li>Keeps your work context instead of starting from zero every time.</li>
+          <li>Creates professional content based on your real projects and information.</li>
+          <li>Takes action across your tools and the web.</li>
+          <li>Helps manage repetitive work in the background.</li>
+          <li>Learns your workflow and becomes more useful over time.</li>
+          <li>Keeps your work organized in one intelligent workspace.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="usecases" class="usecases">
+      <div class="usecases__inner">
+        <h2 class="section__title">Use Cases</h2>
+        <div class="cards">
+          <article class="card">
+            <h3>Realtors</h3>
+            <p>Manage client communication, prepare property materials, organize listings, follow up with leads, and keep every deal moving with less administrative work.</p>
           </article>
-          <article class="feature">
-            <h3>Remembers everything</h3>
-            <p>Context carries across every session. Tell it once and it knows — your preferences, your accounts, your rhythm.</p>
+          <article class="card">
+            <h3>Freelancers &amp; Consultants</h3>
+            <p>Create proposals, presentations, reports, and client deliverables while keeping projects, conversations, and deadlines organized.</p>
           </article>
-          <article class="feature">
-            <h3>Runs on your computer</h3>
-            <p>Your data stays on your machine. Divinity operates locally and only does what you ask — private by design.</p>
+          <article class="card">
+            <h3>Educators &amp; Tutors</h3>
+            <p>Prepare lessons, create learning materials, summarize sessions, organize research, and keep important teaching context available.</p>
           </article>
-          <article class="feature">
-            <h3>Automates the busywork</h3>
-            <p>Hand it a repeating workflow and it runs it for you, the same way, every time, without being reminded.</p>
+          <article class="card">
+            <h3>Hospitality &amp; Small Business</h3>
+            <p>Manage customer communication, bookings, vendor coordination, reports, and everyday operations with an AI that understands your business.</p>
+          </article>
+          <article class="card">
+            <h3>Sales Teams</h3>
+            <p>Research prospects, prepare meeting briefs, create sales materials, update workflows, and stay on top of follow-ups.</p>
+          </article>
+          <article class="card">
+            <h3>Individuals &amp; Professionals</h3>
+            <p>Manage emails, prepare presentations, organize personal projects, research topics, create documents, and handle everyday tasks with less effort.</p>
           </article>
         </div>
       </div>
@@ -108,37 +137,34 @@
     <section id="download" class="download">
       <div class="download__inner">
         <h2 class="section__title">Get Divinity Works</h2>
-        <p class="download__sub">One click. Your coworker installs in seconds.</p>
+        <p class="download__sub">Install once. Sign in once.</p>
+        <p class="download__lede">
+          Divinity starts learning your work, building memory, and helping you create, organize, and
+          complete tasks from day one.
+        </p>
         <div class="os-grid">
           <a class="os-card" href="https://divinityworks.space/download/Divinity-win32-x64-0.1.0-setup.exe" id="dl-win" download>
-            <svg class="os-card__icon" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="currentColor" d="M3 4h9v8H3zM14 4h7v5h-7zM14 10h7v10h-7zM3 13h9v7H3z"/></svg>
             <span class="os-card__name">Windows</span>
             <span class="os-card__meta">Download .exe</span>
           </a>
           <a class="os-card" href="https://divinityworks.space/download/Divinity-darwin-arm64-0.1.0.dmg" id="dl-mac" download>
-            <svg class="os-card__icon" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="currentColor" d="M16 3c0 1.4-.5 2.7-1.4 3.6-.9.9-2.3 1.6-3.4 1.5-.1-1.4.6-2.8 1.4-3.7C13.5 3.5 15 2.9 16 3zM19 17.3c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.8-2-1.7-.2-3.2 1-4 1-.9 0-2.2-1-3.6-1-1.8 0-3.5 1.1-4.4 2.8-1.9 3.3-.5 8.1 1.3 10.8 1 1.3 2.1 2.8 3.6 2.7 1.5 0 2-1 3.8-1 1.7 0 2.2 1 3.7 1 1.5 0 2.5-1.4 3.4-2.7 1.1-1.6 1.5-3.1 1.6-3.2-.1 0-3.1-1.2-3.1-4.5z"/></svg>
             <span class="os-card__name">macOS</span>
             <span class="os-card__meta">Download .dmg</span>
           </a>
           <a class="os-card" href="https://divinityworks.space/download/divinity-linux_0.1.0_amd64.deb" id="dl-linux" download>
-            <svg class="os-card__icon" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="currentColor" d="M9 3h6v2H9zM8 5h8l1 3h2l-2 3 1 9H6l1-9-2-3h2z"/></svg>
             <span class="os-card__name">Linux</span>
             <span class="os-card__meta">Download .deb</span>
           </a>
         </div>
-        <p class="download__alt">Also available for Intel Mac and Linux .rpm on the same release.</p>
+        <p class="download__platforms">Available for macOS, Windows &amp; Linux</p>
       </div>
     </section>
   </main>
 
   <footer class="footer">
     <div class="footer__inner">
-      <a class="brand brand--sm" href="/" aria-label="Divinity Works home">
-        <svg class="brand__mark" width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <path d="M16 2 L29 16 L16 30 L3 16 Z" fill="url(#dgf)"/>
-          <path d="M16 9 L23 16 L16 23 L9 16 Z" fill="#fff" fill-opacity="0.92"/>
-          <defs><linearGradient id="dgf" x1="3" y1="2" x2="29" y2="30" gradientUnits="userSpaceOnUse"><stop stop-color="#6d5efc"/><stop offset="1" stop-color="#19c3a6"/></linearGradient></defs>
-        </svg>
+      <a class="brand brand--sm" href="/" aria-label="Divinity Works">
+        <img class="brand__mark" src="assets/logo-only.png" alt="Divinity" width="22" height="22" />
         <span class="brand__name">Divinity<span class="brand__sub">Works</span></span>
       </a>
       <span class="footer__copy">© <span id="year"></span> Divinity Works. All rights reserved.</span>

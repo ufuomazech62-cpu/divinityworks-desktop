@@ -5,6 +5,19 @@ const dir = __dirname;
 let html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 let css = fs.readFileSync(path.join(dir, 'styles.css'), 'utf8');
 
+// Inline image assets as base64 data URIs so the Worker is fully self-contained
+// (no separate asset routes needed). Uses the real desktop app logo + icon.
+const inlineImg = (rel, mime) => {
+  const p = path.join(dir, rel);
+  if (!fs.existsSync(p)) return null;
+  const b64 = fs.readFileSync(p).toString('base64');
+  return `data:${mime};base64,${b64}`;
+};
+const logoDataUri = inlineImg('assets/logo-only.png', 'image/png');
+const faviconDataUri = inlineImg('assets/favicon.png', 'image/png');
+if (logoDataUri) html = html.split('src="assets/logo-only.png"').join(`src="${logoDataUri}"`);
+if (faviconDataUri) html = html.split('href="assets/favicon.png"').join(`href="${faviconDataUri}"`);
+
 const esc = (s) =>
   s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
 
@@ -52,3 +65,4 @@ const outDir = path.join(dir, '..', 'cloudflare');
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, 'worker.js'), worker);
 console.log('classic worker.js written, bytes:', worker.length);
+console.log('logo inlined:', !!logoDataUri, 'favicon inlined:', !!faviconDataUri);
