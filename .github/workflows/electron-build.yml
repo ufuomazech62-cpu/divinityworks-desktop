@@ -173,11 +173,12 @@ jobs:
           # node-pty ships prebuilt binaries only for darwin/win32; compile the
           # linux-x64 binary so bundle.mjs can stage it into the package. Without
           # this the Linux app crashes on launch (missing prebuilds/linux-x64/pty.node).
-          # Find the actual node-pty path under pnpm's layout (version may vary).
-          PTY=$(find node_modules/.pnpm -maxdepth 3 -type d -name "node-pty" -path "*/node-pty@*/node_modules/node-pty" | head -1)
-          if [ -z "$PTY" ]; then
-            echo "ERROR: node-pty directory not found under node_modules/.pnpm"
-            find node_modules/.pnpm -maxdepth 2 -type d -name "node-pty@*" 2>&1 | head
+          # pnpm-workspace.yaml sets nodeLinker: hoisted, so node-pty is at
+          # apps/x/node_modules/node-pty (hoisted to workspace root, NOT under .pnpm).
+          PTY="node_modules/node-pty"
+          if [ ! -d "$PTY" ]; then
+            echo "ERROR: $PTY not found. Listing node_modules for pty:"
+            ls node_modules/ | grep -i pty || echo "  (no pty in node_modules)"
             exit 1
           fi
           echo "Found node-pty at: $PTY"
