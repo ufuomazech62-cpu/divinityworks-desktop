@@ -1,0 +1,10 @@
+name = "divinityworks-site"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# R2 bucket binding — lets the worker read objects from the divinityworks-uploads
+# bucket without exposing it publicly. Used for serving installers (/download/*)
+# and brand icons (/i/*).
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "divinityworks-uploads"

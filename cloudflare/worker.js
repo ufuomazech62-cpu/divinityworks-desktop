@@ -4,7 +4,6 @@ addEventListener('fetch', (event) => {
 
 const RELEASE_BASE = 'https://github.com/ufuomazech62-cpu/divinityworks-desktop/releases/download/v0.1.0';
 const ASSET_BASE = 'https://raw.githubusercontent.com/ufuomazech62-cpu/divinityworks-desktop/main/assets';
-const R2_BASE = 'https://a228dff517bf5bb1aa84429e6ad4d9fe.r2.cloudflarestorage.com/divinityworks-uploads';
 
 // Map of OS -> installer filename in R2 (releases/v0.1.0/ prefix)
 const INSTALLERS = {
@@ -16,11 +15,10 @@ const INSTALLERS = {
 async function handle(request) {
   const url = new URL(request.url);
 
-  // One-click downloads: /download/<os> -> R2 object.
+  // One-click downloads: /download/<os> -> R2 object via BUCKET binding.
   // OS is auto-detected client-side and the button points to /download/<os>.
   if (url.pathname.startsWith('/download/')) {
     const key = url.pathname.replace('/download/', '');
-    // Direct filename (e.g. /download/Divinity-darwin-arm64-0.1.0.dmg)
     let objectKey;
     if (INSTALLERS[key]) {
       objectKey = 'releases/v0.1.0/' + INSTALLERS[key];
@@ -29,16 +27,17 @@ async function handle(request) {
     } else {
       return new Response('Not found', { status: 404 });
     }
-    const upstream = R2_BASE + '/' + encodeURIComponent(objectKey).replace(/%2F/g, '/');
-    const r = await fetch(upstream, {
-      headers: { 'User-Agent': 'DivinityWorks/1.0', 'Accept': '*/*' },
-    });
-    const headers = new Headers(r.headers);
+    const object = await BUCKET.get(objectKey);
+    if (!object) {
+      return new Response('Not found', { status: 404 });
+    }
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
     headers.set('access-control-allow-origin', '*');
     headers.set('cache-control', 'public, max-age=3600');
     const file = objectKey.split('/').pop();
     headers.set('content-disposition', 'attachment; filename="' + file + '"');
-    return new Response(r.body, { status: r.status, headers });
+    return new Response(object.body, { status: 200, headers });
   }
 
   // Serve static site assets (screenshots, og images) from the public GitHub
@@ -59,14 +58,15 @@ async function handle(request) {
   if (url.pathname.startsWith('/i/')) {
     const file = url.pathname.replace('/i/', '');
     const objectKey = 'site/icons/' + file;
-    const upstream = R2_BASE + '/' + encodeURIComponent(objectKey).replace(/%2F/g, '/');
-    const r = await fetch(upstream, {
-      headers: { 'User-Agent': 'DivinityWorks/1.0', 'Accept': '*/*' },
-    });
-    const headers = new Headers(r.headers);
+    const object = await BUCKET.get(objectKey);
+    if (!object) {
+      return new Response('Not found', { status: 404 });
+    }
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
     headers.set('access-control-allow-origin', '*');
     headers.set('cache-control', 'public, max-age=31536000, immutable');
-    return new Response(r.body, { status: r.status, headers });
+    return new Response(object.body, { status: 200, headers });
   }
 
   const css = `/*
