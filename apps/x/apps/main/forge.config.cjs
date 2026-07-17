@@ -310,8 +310,8 @@ module.exports = {
             name: '@electron-forge/publisher-github',
             config: {
                 repository: {
-                    owner: 'divinityworks',
-                    name: 'divinity'
+                    owner: 'ufuomazech62-cpu',
+                    name: 'divinityworks-desktop'
                 },
                 prerelease: true
             }
