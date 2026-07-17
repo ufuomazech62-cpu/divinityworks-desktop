@@ -97,7 +97,8 @@ jobs:
           VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # When no Apple cert is set, skip signing/notarization entirely
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.APPLE_CERTIFICATE == '' && 'false' || '' }}
+          # (forge.config.cjs checks ROWBOAT_SKIP_CODE_SIGNING=1)
+          ROWBOAT_SKIP_CODE_SIGNING: ${{ (secrets.APPLE_CERTIFICATE == '' || secrets.APPLE_ID == '') && '1' || '' }}
         run: npx electron-forge publish --arch=arm64,x64 --platform=darwin
         working-directory: apps/x/apps/main
 
@@ -172,7 +173,14 @@ jobs:
           # node-pty ships prebuilt binaries only for darwin/win32; compile the
           # linux-x64 binary so bundle.mjs can stage it into the package. Without
           # this the Linux app crashes on launch (missing prebuilds/linux-x64/pty.node).
-          PTY="node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty"
+          # Find the actual node-pty path under pnpm's layout (version may vary).
+          PTY=$(find node_modules/.pnpm -maxdepth 3 -type d -name "node-pty" -path "*/node-pty@*/node_modules/node-pty" | head -1)
+          if [ -z "$PTY" ]; then
+            echo "ERROR: node-pty directory not found under node_modules/.pnpm"
+            find node_modules/.pnpm -maxdepth 2 -type d -name "node-pty@*" 2>&1 | head
+            exit 1
+          fi
+          echo "Found node-pty at: $PTY"
           cd "$PTY"
           npx node-gyp rebuild
           mkdir -p prebuilds/linux-x64
