@@ -1,18 +1,18 @@
+// Cloudflare SaaS Worker — handles auth, LLM proxy (OpenRouter/hy3), Composio
+// proxy, billing. The desktop app talks to this single endpoint for all
+// cloud-side operations. Agent features run locally and don't touch the cloud.
+// Workers.dev URL is the default until dash.divinityworks.space DNS is wired.
 export const API_URL =
-  process.env.API_URL || 'https://api.divinityworks.space';
+  process.env.API_URL || 'https://dash.divinityworks.space';
 
 // GitHub OAuth app used for Apps publishing (device flow, public_repo scope).
 // Client IDs are public identifiers, not secrets (spec §3).
 export const GITHUB_OAUTH_CLIENT_ID =
   process.env.ROWBOAT_GITHUB_CLIENT_ID || 'Ov23liAka106zKEovj4B';
 
-// Auth0 tenant used for the "Sign in with Divinity" managed login on the desktop.
-// These are public identifiers (domain + client id) — safe to ship in the binary.
-// The desktop uses a public client (PKCE, no secret) against this tenant, replacing
-// the old Rowboat/Supabase managed-auth issuer. Override at launch with
-// DIVINITY_AUTH0_DOMAIN / DIVINITY_AUTH0_CLIENT_ID if you provision a dedicated
-// Native Auth0 application for the desktop.
-export const DIVINITY_AUTH0_DOMAIN =
-  process.env.DIVINITY_AUTH0_DOMAIN || 'dev-6y2css63pk2d2pwd.us.auth0.com';
-export const DIVINITY_AUTH0_CLIENT_ID =
-  process.env.DIVINITY_AUTH0_CLIENT_ID || 'AS8moluKc8B8SrnGp2ie0SYOIlqLdfzf';
+// @deprecated — Auth0 is no longer used. Sign-in goes through the SaaS Worker.
+// These stubs exist only so `providers.ts` (which is no longer called for the
+// 'rowboat' provider — see oauth-handler.ts) keeps type-checking. Will be
+// removed when providers.ts is cleaned up.
+export const DIVINITY_AUTH0_DOMAIN = '';
+export const DIVINITY_AUTH0_CLIENT_ID = '';

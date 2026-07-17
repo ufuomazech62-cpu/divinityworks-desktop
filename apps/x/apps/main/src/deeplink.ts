@@ -37,7 +37,9 @@ export function extractDeepLinkFromArgv(argv: readonly string[]): string | null 
  * triggers sync — both main-process concerns.
  */
 export function dispatchUrl(url: string): void {
-    if (parseAction(url)) {
+    if (parseDivinityAuthCallback(url)) {
+        void dispatchDivinityAuthCallback(url);
+    } else if (parseAction(url)) {
         void dispatchAction(url);
     } else if (parsePickerCompletion(url)) {
         void dispatchPickerCompletion(url);
@@ -118,6 +120,45 @@ async function handleTakeMeetingNotes(eventId: string, openMeeting: boolean): Pr
     }
 
     win.webContents.send("app:takeMeetingNotes", payload);
+}
+
+// --- Divinity sign-in completion (browser -> desktop deep link) ---
+// The SaaS Worker authenticates the user in the browser, then redirects to:
+//   divinity://auth/callback?access_token=X&refresh_token=Y&email=Z
+// This handler extracts the tokens and hands them to completeDivinitySignIn,
+// which stores them and emits the success event to the renderer.
+
+interface DivinityAuthCallback {
+    access_token: string;
+    refresh_token: string;
+    email?: string;
+}
+
+function parseDivinityAuthCallback(url: string): DivinityAuthCallback | null {
+    if (!url.startsWith(URL_PREFIX)) return null;
+    const rest = url.slice(URL_PREFIX.length);
+    const queryIdx = rest.indexOf("?");
+    const path = queryIdx >= 0 ? rest.slice(0, queryIdx) : rest;
+    if (path.replace(/\/$/, "") !== "auth/callback") return null;
+    const params = new URLSearchParams(queryIdx >= 0 ? rest.slice(queryIdx + 1) : "");
+    const access_token = params.get("access_token");
+    const refresh_token = params.get("refresh_token");
+    if (!access_token || !refresh_token) return null;
+    const email = params.get("email") || undefined;
+    return { access_token, refresh_token, email };
+}
+
+async function dispatchDivinityAuthCallback(url: string): Promise<void> {
+    const parsed = parseDivinityAuthCallback(url);
+    if (!parsed) return;
+
+    // Bring the app to the front so the user sees the signed-in state update.
+    const win = mainWindowRef;
+    if (win && !win.isDestroyed()) focusWindow(win);
+
+    // Lazy-import to avoid a circular dep with oauth-handler.ts.
+    const { completeDivinitySignIn } = await import("./oauth-handler.js");
+    await completeDivinitySignIn(parsed);
 }
 
 // --- OAuth completion (rowboat-mode Google connect) ---

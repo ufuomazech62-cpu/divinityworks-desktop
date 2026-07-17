@@ -245,6 +245,26 @@ export async function connectProvider(provider: string, credentials?: { clientId
     const oauthRepo = getOAuthRepo();
     const providerConfig = await getProviderConfig(provider);
 
+    // Divinity sign-in uses the Cloudflare SaaS Worker (dash.divinityworks.space).
+    // The Worker handles all auth in the browser — the desktop just opens the
+    // browser and waits for the divinity://auth/callback deep link to arrive
+    // with the tokens. No local server, no PKCE, no Auth0 client needed.
+    // The deep-link callback is handled in deeplink.ts (dispatchDivinityAuthCallback).
+    if (provider === 'rowboat') {
+      try {
+        const { API_URL } = await import('@x/core/dist/config/env.js');
+        await shell.openExternal(`${API_URL}/signin?desktop=1`);
+        console.log('[OAuth] Opened browser for Divinity sign-in (Worker-based flow)');
+        return { success: true };
+      } catch (error) {
+        console.error('[OAuth] Failed to open browser for Divinity sign-in:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to open browser',
+        };
+      }
+    }
+
     if (provider === 'google') {
       if (!credentials?.clientId || !credentials?.clientSecret) {
         // No credentials → rowboat mode if the user is signed in to Divinity
@@ -497,6 +517,81 @@ export async function completeRowboatGoogleConnect(state: string): Promise<void>
       provider: 'google',
       success: false,
       error: error instanceof Error ? error.message : 'Failed to claim Google tokens',
+    });
+  }
+}
+
+/**
+ * Complete Divinity sign-in from the browser-based flow.
+ *
+ * Called by deeplink.ts when the divinity://auth/callback URL arrives. The
+ * Worker has already authenticated the user in the browser and issued a JWT
+ * access_token + refresh_token. We just store them and notify the renderer.
+ *
+ * The access_token is a JWT issued by the SaaS Worker (HS256, 15min TTL).
+ * The refresh_token is a random 32-byte hex string (30-day TTL).
+ */
+export async function completeDivinitySignIn(params: {
+  access_token: string;
+  refresh_token: string;
+  email?: string;
+}): Promise<void> {
+  try {
+    console.log('[OAuth] Completing Divinity sign-in from browser flow...');
+    const { access_token, refresh_token, email } = params;
+
+    // Decode the JWT to get the expiry (no verification needed here — the
+    // Worker signed it and we'll verify on every API call via Bearer auth).
+    const payloadB64 = access_token.split('.')[1];
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+    const expiresAt = payload.exp ?? Math.floor(Date.now() / 1000) + 15 * 60;
+
+    const oauthRepo = getOAuthRepo();
+    await oauthRepo.upsert('rowboat', {
+      tokens: {
+        access_token,
+        refresh_token,
+        expires_at: expiresAt,
+        token_type: 'Bearer',
+        scopes: ['openid', 'email', 'profile'],
+      },
+      error: null,
+    });
+
+    // Fetch the user's billing info so the UI can render plan/usage.
+    // The Worker's /v1/me returns the shape getBillingInfo() expects.
+    let signedInUserId: string | undefined;
+    try {
+      const billing = await getBillingInfo();
+      if (billing.userId) {
+        signedInUserId = billing.userId;
+        analyticsIdentify(billing.userId, {
+          ...(billing.userEmail ? { email: billing.userEmail } : {}),
+          plan: billing.subscriptionPlanId,
+          status: billing.subscriptionStatus,
+        });
+        analyticsCapture('user_signed_in', {
+          plan: billing.subscriptionPlanId,
+          status: billing.subscriptionStatus,
+        });
+      }
+    } catch (meError) {
+      console.error('[OAuth] Failed to fetch billing info after sign-in:', meError);
+      // Non-fatal — sign-in still succeeded, we just don't have billing yet.
+    }
+
+    emitOAuthEvent({
+      provider: 'rowboat',
+      success: true,
+      ...(signedInUserId ? { userId: signedInUserId } : {}),
+    });
+    console.log('[OAuth] Divinity sign-in complete');
+  } catch (error) {
+    console.error('[OAuth] Failed to complete Divinity sign-in:', error);
+    emitOAuthEvent({
+      provider: 'rowboat',
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to complete sign-in',
     });
   }
 }
