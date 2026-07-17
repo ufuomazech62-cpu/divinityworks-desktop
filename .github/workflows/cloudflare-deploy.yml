@@ -45,7 +45,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          wrangler deploy worker.js --name divinityworks-site --compatibility-date 2024-09-23
+          wrangler deploy
 
       - name: Smoke-check the live site
         run: |
