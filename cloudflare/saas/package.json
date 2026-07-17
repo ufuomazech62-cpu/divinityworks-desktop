@@ -1,0 +1,26 @@
+{
+  "name": "divinityworks-saas",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create divinityworks-saas",
+    "db:migrate": "wrangler d1 execute divinityworks-saas --file=migrations/0001_init.sql",
+    "db:studio": "wrangler d1 execute divinityworks-saas --command=\"SELECT * FROM users LIMIT 5\"",
+    "kv:create": "wrangler kv namespace create KV",
+    "secret:jwt": "wrangler secret put JWT_SECRET",
+    "secret:openrouter": "wrangler secret put OPENROUTER_API_KEY",
+    "secret:composio": "wrangler secret put COMPOSIO_API_KEY",
+    "secret:stripe": "wrangler secret put STRIPE_SECRET_KEY",
+    "secret:stripe-webhook": "wrangler secret put STRIPE_WEBHOOK_SECRET",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241205.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  }
+}
