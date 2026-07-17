@@ -19,6 +19,7 @@ import { Hono, type Context } from 'hono';
 import { hashPassword, verifyPassword, signJwt, generateToken, generateUuid, sha256 } from '../lib/crypto.js';
 import { requireAuth } from '../lib/auth.js';
 import type { Env, AuthVars } from '../lib/env.js';
+import { desktopCallbackPage } from '../pages/desktop-callback.js';
 
 const ACCESS_TOKEN_TTL = 15 * 60;           // 15 minutes
 const REFRESH_TOKEN_TTL = 30 * 24 * 60 * 60; // 30 days
@@ -122,6 +123,18 @@ auth.post('/logout', requireAuth, async (c) => {
     'UPDATE refresh_tokens SET revoked_at = unixepoch() WHERE user_id = ? AND revoked_at IS NULL'
   ).bind(user.id).run();
   return c.json({ ok: true });
+});
+
+// ---------- GET /auth/desktop-callback (authed) — renders the divinity://
+// redirect page. Called by the dashboard's JS after a successful login when
+// the user came from the desktop app (signaled by ?desktop=1 on /signin).
+auth.get('/desktop-callback', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  // Issue a fresh pair of tokens for the deep-link handoff. We don't reuse
+  // the access_token the dashboard already has, because the desktop app
+  // needs its own refresh_token stored locally for future silent refreshes.
+  const tokens = await issueTokens(c, user.id, user.email);
+  return c.html(desktopCallbackPage(c, tokens.access_token, tokens.refresh_token, user.email));
 });
 
 // ---------- helper: issue access + refresh tokens ----------

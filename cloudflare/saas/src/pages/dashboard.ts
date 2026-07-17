@@ -122,6 +122,7 @@ export function signinPage(): string {
         errEl.style.display = 'none';
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+        const isDesktop = new URLSearchParams(window.location.search).has('desktop');
         try {
           const res = await fetch('/auth/login', {
             method: 'POST',
@@ -130,9 +131,23 @@ export function signinPage(): string {
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Login failed');
-          // Store the access token and redirect to dashboard
           localStorage.setItem('dw_access_token', data.access_token);
           localStorage.setItem('dw_refresh_token', data.refresh_token);
+
+          if (isDesktop) {
+            // Came from the desktop app — fetch the divinity:// callback page
+            // and replace the current page with it (auto-redirects to the app)
+            const cbRes = await fetch('/auth/desktop-callback', {
+              headers: { Authorization: 'Bearer ' + data.access_token },
+            });
+            if (cbRes.ok) {
+              const html = await cbRes.text();
+              document.open();
+              document.write(html);
+              document.close();
+              return;
+            }
+          }
           window.location.href = '/';
         } catch (err) {
           errEl.textContent = err.message;
@@ -170,6 +185,7 @@ export function signupPage(): string {
         errEl.style.display = 'none';
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+        const isDesktop = new URLSearchParams(window.location.search).has('desktop');
         try {
           const res = await fetch('/auth/signup', {
             method: 'POST',
@@ -180,6 +196,19 @@ export function signupPage(): string {
           if (!res.ok) throw new Error(data.error || 'Sign up failed');
           localStorage.setItem('dw_access_token', data.access_token);
           localStorage.setItem('dw_refresh_token', data.refresh_token);
+
+          if (isDesktop) {
+            const cbRes = await fetch('/auth/desktop-callback', {
+              headers: { Authorization: 'Bearer ' + data.access_token },
+            });
+            if (cbRes.ok) {
+              const html = await cbRes.text();
+              document.open();
+              document.write(html);
+              document.close();
+              return;
+            }
+          }
           window.location.href = '/';
         } catch (err) {
           errEl.textContent = err.message;
