@@ -1,0 +1,61 @@
+name: Deploy Landing Page (Cloudflare Worker)
+
+# Deploys cloudflare/worker.js to the `divinityworks-site` Cloudflare Worker,
+# which serves divinityworks.space and www.divinityworks.space.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — token with "Edit Cloudflare Workers" permission
+#   CLOUDFLARE_ACCOUNT_ID  — the account ID that owns the divinityworks-site worker
+#
+# Once configured, every push to main that touches cloudflare/worker.js
+# (or the assets folder referenced via the /s/* proxy) will redeploy.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare/worker.js'
+      - 'cloudflare/metadata.json'
+      - '.github/workflows/cloudflare-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf-deploy-divinityworks-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Deploy worker with wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare
+          command: deploy worker.js --name divinityworks-site --compatibility-date 2024-09-23
+
+      - name: Smoke-check the live site
+        run: |
+          sleep 8
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /tmp/live.html -w "%{http_code}" "https://divinityworks.space/?cb=$RANDOM$RANDOM")
+            title=$(grep -oE "<title>[^<]+</title>" /tmp/live.html | head -1)
+            echo "Attempt $i: HTTP $code  $title"
+            if [ "$code" = "200" ]; then
+              echo "Live site responded OK"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Live site did not respond 200 after 5 attempts"
+          exit 1
