@@ -583,8 +583,8 @@ img, svg { display: block; max-width: 100%; }
         <span>Divinity<span class="brand__sub">Works</span></span>
       </a>
       <nav class="nav__links">
-        <a href="#surfaces">Surfaces</a>
-        <a href="#how">Loop</a>
+        <a href="#surfaces">What's inside</a>
+        <a href="#how">How it works</a>
         <a href="#talk">Talk</a>
         <a href="#why">Why</a>
         <button class="nav__cta" id="nav-download" type="button">Download</button>
@@ -605,7 +605,7 @@ img, svg { display: block; max-width: 100%; }
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download for <span id="hero-download-os">your device</span>
           </button>
-          <a class="btn btn--ghost" href="#how">See how it works</a>
+          <a class="btn btn--ghost" href="#how">See it in action</a>
         </div>
         <div class="hero__platforms">
           <span class="hero__platform"><img src="/i/apple.svg" alt="" onerror="this.style.display='none'" /><span>Mac</span></span>
@@ -621,7 +621,7 @@ img, svg { display: block; max-width: 100%; }
             srcset="/s/hero-screenshot-small.webp 800w, /s/hero-screenshot-medium.webp 1280w, /s/hero-screenshot.webp 1920w"
             sizes="(max-width: 720px) 92vw, (max-width: 1080px) 88vw, 1040px"
             alt="Divinity Works desktop app"
-            width="1920" height="967" decoding="async" fetchpriority="high" />
+            width="1920" height="1130" decoding="async" fetchpriority="high" />
         </div>
       </div>
     </section>
@@ -647,7 +647,7 @@ img, svg { display: block; max-width: 100%; }
     <!-- ===== SURFACES ===== -->
     <section id="surfaces" class="surfaces">
       <div class="section__inner">
-        <p class="section__eyebrow">Surfaces</p>
+        <p class="section__eyebrow">What's inside</p>
         <h2 class="section__title">Every surface, one workspace.</h2>
         <p class="section__lede">Divinity comes with the apps you use to work — all sharing the same memory.</p>
         <div class="surfaces__grid">
@@ -688,9 +688,9 @@ img, svg { display: block; max-width: 100%; }
     <!-- ===== LOOP ===== -->
     <section id="how" class="how">
       <div class="section__inner">
-        <p class="section__eyebrow">Loop</p>
+        <p class="section__eyebrow">How it works</p>
         <h2 class="section__title">How Divinity works.</h2>
-        <p class="section__lede">It indexes your work into a living memory, then uses that memory to create and act on your behalf.</p>
+        <p class="section__lede">It indexes your work into a living memory, then uses that memory to create, act, and get things done with you.</p>
         <div class="how__grid">
           <article class="step">
             <span class="step__num">01</span>
@@ -834,8 +834,8 @@ img, svg { display: block; max-width: 100%; }
       </a>
       <span class="footer__copy">© <span id="year"></span> Divinity Works</span>
       <nav class="footer__links">
-        <a href="#surfaces">Surfaces</a>
-        <a href="#how">Loop</a>
+        <a href="#surfaces">What's inside</a>
+        <a href="#how">How it works</a>
         <a href="#talk">Talk</a>
         <a href="#download">Download</a>
       </nav>
