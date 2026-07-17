@@ -844,22 +844,16 @@ img, svg { display: block; max-width: 100%; }
   </footer>
 
   <script>
-    // OS detection + one-click download.
-    // Rule: the download button NEVER scrolls. It either downloads immediately
-    // (Mac/Windows/Linux), shows an inline message (mobile), or picks a sensible
-    // default with an inline OS picker (unknown).
+    // One rule: clicking Download downloads. Immediately. No scroll, no toast,
+    // no notes, no "Get the desktop app". Just download.
+    // Detect the OS, default to Mac if unknown (or mobile), download that.
     (function() {
       function detectOS() {
-        var ua = navigator.userAgent || navigator.platform || '';
-        var uaLower = ua.toLowerCase();
-        // iOS / Android — Divinity doesn't run here. Show a message.
-        if (/ipad|iphone|ipod/.test(uaLower) || /android|mobile/i.test(uaLower)) return 'mobile';
-        if (/mac/.test(uaLower)) return 'mac';
-        if (/windows/.test(uaLower)) return 'windows';
-        if (/linux/.test(uaLower) && !/android/.test(uaLower)) return 'linux';
-        // Unknown desktop — default to Mac (most common for early adopters).
-        // User can still pick another OS from the inline dropdown.
-        return 'unknown';
+        var ua = (navigator.userAgent || navigator.platform || '').toLowerCase();
+        if (/windows/.test(ua)) return 'windows';
+        if (/linux/.test(ua) && !/android/.test(ua)) return 'linux';
+        if (/mac|iphone|ipad|ipod/.test(ua)) return 'mac';
+        return 'mac'; // default — Mac is the most common for early adopters
       }
 
       var os = detectOS();
@@ -871,164 +865,87 @@ img, svg { display: block; max-width: 100%; }
         linux: '/download/linux'
       };
 
-      // The OS that the primary buttons will download.
-      // For 'unknown' we default to mac; for 'mobile' the button is a no-op
-      // (handled separately below).
-      var primaryOs = (os === 'mobile' || os === 'unknown') ? 'mac' : os;
-
-      function setButtonLabel(id, label) {
+      // Set the button labels and icons.
+      ['hero-download-os', 'primary-download-os'].forEach(function(id) {
         var el = document.getElementById(id);
-        if (el) el.textContent = label;
-      }
-      function setButtonIcon(id, iconUrl) {
+        if (el) el.textContent = osLabels[os];
+      });
+      ['hero-download', 'primary-download'].forEach(function(id) {
         var btn = document.getElementById(id);
         if (!btn) return;
-        // Remove any existing OS icon
         var existing = btn.querySelector('img.os-icon');
         if (existing) existing.remove();
-        if (!iconUrl) return;
         var img = document.createElement('img');
-        img.src = iconUrl;
+        img.src = osIcons[os];
         img.alt = '';
         img.className = 'os-icon';
         img.style.cssText = 'width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:2px;';
-        // Insert before the text span
         var span = btn.querySelector('span');
         if (span) btn.insertBefore(img, span);
-      }
+      });
 
-      // Update button labels + detected pill
-      if (os === 'mobile') {
-        // Mobile device — Divinity doesn't run here. Show a different label.
-        setButtonLabel('hero-download-os', 'Get the desktop app');
-        setButtonLabel('primary-download-os', 'Get the desktop app');
-        var pill = document.getElementById('detected-pill');
-        if (pill) pill.style.display = 'none';
-        var alt = document.querySelector('.download__alt');
-        if (alt) alt.style.display = 'none';
-      } else if (os === 'unknown') {
-        // Couldn't detect — default to Mac, but make the OS picker visible
-        // so the user can switch if needed.
-        setButtonLabel('hero-download-os', osLabels.mac);
-        setButtonLabel('primary-download-os', osLabels.mac);
-        setButtonIcon('hero-download', osIcons.mac);
-        setButtonIcon('primary-download', osIcons.mac);
-        var detIcon = document.getElementById('detected-icon');
-        if (detIcon) detIcon.innerHTML = '<img src="' + osIcons.mac + '" alt="" />';
-        var detName = document.getElementById('detected-name');
-        if (detName) detName.textContent = osLabels.mac + ' (default)';
-        // Change the alt-link to open the inline picker instead of scrolling.
-        var altLink = document.getElementById('alt-link');
-        if (altLink) altLink.textContent = 'Choose a different OS';
-      } else {
-        // Detected Mac/Windows/Linux.
-        setButtonLabel('hero-download-os', osLabels[os]);
-        setButtonLabel('primary-download-os', osLabels[os]);
-        setButtonIcon('hero-download', osIcons[os]);
-        setButtonIcon('primary-download', osIcons[os]);
-        var detIcon2 = document.getElementById('detected-icon');
-        if (detIcon2) detIcon2.innerHTML = '<img src="' + osIcons[os] + '" alt="" />';
-        var detName2 = document.getElementById('detected-name');
-        if (detName2) detName2.textContent = osLabels[os];
-      }
+      // Detected pill in the download section.
+      var detIcon = document.getElementById('detected-icon');
+      if (detIcon) detIcon.innerHTML = '<img src="' + osIcons[os] + '" alt="" />';
+      var detName = document.getElementById('detected-name');
+      if (detName) detName.textContent = osLabels[os];
 
-      // The three primary download buttons (nav, hero, primary).
-      // They ALWAYS download immediately — never scroll.
-      function triggerDownload(e) {
-        e.preventDefault();
-        if (os === 'mobile') {
-          // Mobile device — show an inline toast instead of downloading.
-          showToast('Divinity runs on Mac, Windows, and Linux. Open this page on your computer to download.');
-          return;
-        }
-        // primaryOs is 'mac' for unknown, or the detected OS otherwise.
-        window.location.href = osUrls[primaryOs];
+      // The download action. Every download button does exactly this.
+      function download() {
+        window.location.href = osUrls[os];
       }
       ['nav-download', 'hero-download', 'primary-download'].forEach(function(id) {
         var el = document.getElementById(id);
-        if (el) el.addEventListener('click', triggerDownload);
+        if (el) el.addEventListener('click', download);
       });
 
-      // Inline toast for mobile users (no scrolling, no redirects).
-      function showToast(msg) {
-        var existing = document.getElementById('dw-toast');
-        if (existing) existing.remove();
-        var t = document.createElement('div');
-        t.id = 'dw-toast';
-        t.textContent = msg;
-        t.style.cssText = [
-          'position:fixed', 'left:50%', 'bottom:32px',
-          'transform:translateX(-50%)',
-          'background:#0a0a0a', 'color:#fff',
-          'padding:14px 22px', 'border-radius:10px',
-          'font-size:14px', 'line-height:1.45', 'max-width:90vw',
-          'box-shadow:0 12px 32px rgba(0,0,0,0.25)',
-          'z-index:1000', 'font-family:inherit',
-          'letter-spacing:-0.01em'
-        ].join(';');
-        document.body.appendChild(t);
-        setTimeout(function() {
-          t.style.transition = 'opacity .3s ease, transform .3s ease';
-          t.style.opacity = '0';
-          t.style.transform = 'translateX(-50%) translateY(10px)';
-          setTimeout(function() { t.remove(); }, 320);
-        }, 4000);
-      }
-
-      // "Choose a different OS" / "Browse all downloads" link.
-      // Opens an inline OS picker (popover) — never scrolls.
+      // The "On a different machine?" link opens a small inline OS picker
+      // right next to the link. Never scrolls.
       var altLink = document.getElementById('alt-link');
       if (altLink) {
         altLink.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
-          openOsPicker(this);
-        });
-      }
-
-      function openOsPicker(anchor) {
-        var existing = document.getElementById('dw-picker');
-        if (existing) { existing.remove(); return; }
-        var p = document.createElement('div');
-        p.id = 'dw-picker';
-        p.style.cssText = [
-          'position:absolute', 'background:#0a0a0a', 'color:#fff',
-          'border-radius:10px', 'padding:6px', 'min-width:180px',
-          'box-shadow:0 16px 40px rgba(0,0,0,0.28)',
-          'z-index:1001', 'font-family:inherit'
-        ].join(';');
-        var options = [
-          { os: 'mac', label: 'Mac', icon: osIcons.mac },
-          { os: 'windows', label: 'Windows', icon: osIcons.windows },
-          { os: 'linux', label: 'Linux', icon: osIcons.linux }
-        ];
-        options.forEach(function(opt) {
-          var a = document.createElement('a');
-          a.href = osUrls[opt.os];
-          a.style.cssText = [
-            'display:flex', 'align-items:center', 'gap:10px',
-            'padding:10px 12px', 'color:#fff', 'text-decoration:none',
-            'border-radius:6px', 'font-size:14px', 'letter-spacing:-0.01em'
+          var existing = document.getElementById('dw-picker');
+          if (existing) { existing.remove(); return; }
+          var p = document.createElement('div');
+          p.id = 'dw-picker';
+          p.style.cssText = [
+            'position:absolute', 'background:#0a0a0a', 'color:#fff',
+            'border-radius:10px', 'padding:6px', 'min-width:180px',
+            'box-shadow:0 16px 40px rgba(0,0,0,0.28)',
+            'z-index:1001', 'font-family:inherit'
           ].join(';');
-          a.innerHTML = '<img src="' + opt.icon + '" alt="" style="width:14px;height:14px;" />' + opt.label;
-          a.addEventListener('mouseenter', function() { a.style.background = 'rgba(255,255,255,0.08)'; });
-          a.addEventListener('mouseleave', function() { a.style.background = 'transparent'; });
-          p.appendChild(a);
-        });
-        // Position below the anchor
-        var rect = anchor.getBoundingClientRect();
-        p.style.left = rect.left + 'px';
-        p.style.top = (rect.bottom + 8 + window.scrollY) + 'px';
-        document.body.appendChild(p);
-        // Close on outside click
-        setTimeout(function() {
-          document.addEventListener('click', function close(ev) {
-            if (!p.contains(ev.target) && ev.target !== anchor) {
-              p.remove();
-              document.removeEventListener('click', close);
-            }
+          [
+            { os: 'mac', label: 'Mac' },
+            { os: 'windows', label: 'Windows' },
+            { os: 'linux', label: 'Linux' }
+          ].forEach(function(opt) {
+            var a = document.createElement('a');
+            a.href = osUrls[opt.os];
+            a.style.cssText = [
+              'display:flex', 'align-items:center', 'gap:10px',
+              'padding:10px 12px', 'color:#fff', 'text-decoration:none',
+              'border-radius:6px', 'font-size:14px', 'letter-spacing:-0.01em'
+            ].join(';');
+            a.innerHTML = '<img src="' + osIcons[opt.os] + '" alt="" style="width:14px;height:14px;" />' + opt.label;
+            a.addEventListener('mouseenter', function() { a.style.background = 'rgba(255,255,255,0.08)'; });
+            a.addEventListener('mouseleave', function() { a.style.background = 'transparent'; });
+            p.appendChild(a);
           });
-        }, 0);
+          var rect = altLink.getBoundingClientRect();
+          p.style.left = rect.left + 'px';
+          p.style.top = (rect.bottom + 8 + window.scrollY) + 'px';
+          document.body.appendChild(p);
+          setTimeout(function() {
+            document.addEventListener('click', function close(ev) {
+              if (!p.contains(ev.target) && ev.target !== altLink) {
+                p.remove();
+                document.removeEventListener('click', close);
+              }
+            });
+          }, 0);
+        });
       }
 
       document.getElementById('year').textContent = new Date().getFullYear();
