@@ -29,6 +29,8 @@ import { SidebarContentPanel } from '@/components/sidebar-content'
 // (Product tour removed — onboarding lands the user directly);
 import { SuggestedTopicsView } from '@/components/suggested-topics-view';
 import { UpdateNotification } from '@/components/update-notification';
+import { SignInGate } from '@/components/sign-in-gate';
+import { useRowboatAccount } from '@/hooks/useRowboatAccount';
 import { LiveNotesView } from '@/components/live-notes-view';
 import { BgTasksView } from '@/components/bg-tasks-view';
 import { AppsView } from '@/components/apps/apps-view';
@@ -820,6 +822,11 @@ function ContentHeader({
 function App() {
   const { chatPanePlacement, chatPaneSize } = useTheme()
   const isChatPaneInMiddle = chatPanePlacement === 'middle'
+
+  // Sign-in gate — if the user isn't signed in, show a clean sign-in screen
+  // instead of the full app. No onboarding, no LLM setup, no tour. Just:
+  // open app → sign in → done. The LLM is handled by the SaaS Worker proxy.
+  const { signedIn, isLoading: isCheckingAuth } = useRowboatAccount()
 
   type ShortcutPane = 'left' | 'right'
   type MarkdownHistoryHandlers = { undo: () => boolean; redo: () => boolean }
@@ -5252,17 +5259,14 @@ function App() {
     })
   }, [])
 
-  // Check onboarding status on mount
+  // Onboarding disabled — the sign-in gate replaces it. Users no longer go
+  // through a 5-step onboarding wizard (welcome → LLM setup → connect accounts
+  // → code mode → completion). They just sign in and land in the app.
+  // The LLM is handled by the SaaS Worker proxy (no API key needed).
   useEffect(() => {
-    async function checkOnboarding() {
-      try {
-        const result = await window.ipc.invoke('onboarding:getStatus', null)
-        setShowOnboarding(result.showOnboarding)
-      } catch (err) {
-        console.error('Failed to check onboarding status:', err)
-      }
-    }
-    checkOnboarding()
+    // Mark onboarding as complete so it never shows again for existing users
+    // who may have the flag unset from a previous version.
+    window.ipc.invoke('onboarding:markComplete', null).catch(() => {})
   }, [])
 
   // Handler for onboarding completion. The product tour was removed, so the
@@ -6120,6 +6124,15 @@ function App() {
     }
     return markdownTabs
   }, [fileTabs, selectedPath])
+
+  // Sign-in gate — if not signed in (and we've finished checking), show the
+  // minimal sign-in screen instead of the full app. No onboarding, no LLM
+  // setup, no tour. The user signs in → browser opens → tokens arrive via
+  // divinity://auth/callback → signedIn flips to true → full app renders.
+  if (!isCheckingAuth && !signedIn) {
+    return <SignInGate />
+  }
+
   return (
     <TooltipProvider delayDuration={0}>
       <SidebarSectionProvider defaultSection="tasks" onSectionChange={(section) => {
