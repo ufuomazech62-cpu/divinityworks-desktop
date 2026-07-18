@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, shell, dialog, systemPreferences, desktopCapturer, app, screen, powerSaveBlocker } from 'electron';
+import { ipcMain, BrowserWindow, shell, dialog, systemPreferences, desktopCapturer, app, screen, powerSaveBlocker, autoUpdater } from 'electron';
 import { ipc } from '@x/shared';
 import path from 'node:path';
 import os from 'node:os';
@@ -640,6 +640,92 @@ export function emitOAuthEvent(event: { provider: string; success: boolean; erro
   // prompt, so any OAuth state change must rebuild it.
   invalidateCopilotInstructionsCache();
   broadcastToWindows('oauth:didConnect', event);
+}
+
+// ----------------------------------------------------------------------------
+// Auto-update IPC bridge
+//
+// The autoUpdater (initialized in main.ts via update-electron-app) emits
+// events on the main process. We forward them to the renderer so the UI can
+// show an in-app "Update available" banner instead of a native OS dialog.
+//
+// Renderer -> main:
+//   'update:check'    — manually check for updates (e.g. from Settings)
+//   'update:install'  — quit + install the downloaded update
+//   'update:dismiss'  — user dismissed the banner (we just log; the renderer
+//                       decides whether to show again this session)
+//
+// Main -> renderer (broadcast):
+//   'update:checking'       — started checking
+//   'update:available'      — new version found, { version, releaseNotes }
+//   'update:not-available'  — already on the latest version
+//   'update:progress'       — download progress, { percent, bytesPerSecond, transferred, total }
+//   'update:downloaded'     — download complete, ready to install
+//   'update:error'          — { message }
+// ----------------------------------------------------------------------------
+
+let updateIpcRegistered = false;
+export function registerUpdateIpc(): void {
+  if (updateIpcRegistered) return;
+  updateIpcRegistered = true;
+
+  // Forward autoUpdater events to all renderer windows.
+  // Electron's built-in autoUpdater has limited event payloads — most info
+  // comes via 'update-downloaded' (releaseNotes, releaseName, releaseDate).
+  autoUpdater.on('checking-for-update', () => {
+    broadcastToWindows('update:checking', {});
+  });
+  autoUpdater.on('update-available', () => {
+    // Electron's autoUpdater doesn't pass version info in this event —
+    // we just signal "an update exists". The version arrives in
+    // 'update-downloaded' as releaseName.
+    broadcastToWindows('update:available', {
+      version: 'unknown', // will be filled in when download completes
+      releaseNotes: null,
+    });
+  });
+  autoUpdater.on('update-not-available', () => {
+    broadcastToWindows('update:not-available', {});
+  });
+  autoUpdater.on('update-downloaded', (_event, releaseNotes, releaseName, releaseDate, _updateURL) => {
+    // releaseName is typically "v0.1.3" — strip the leading v for display.
+    const version = (releaseName || '').replace(/^v/, '') || 'unknown';
+    broadcastToWindows('update:downloaded', {
+      version,
+      releaseNotes: releaseNotes || null,
+      releaseDate: releaseDate ? releaseDate.toISOString() : null,
+    });
+  });
+  autoUpdater.on('error', (err: Error) => {
+    broadcastToWindows('update:error', {
+      message: err?.message ?? 'Unknown update error',
+    });
+  });
+
+  // Renderer -> main handlers.
+  ipcMain.handle('update:check', async () => {
+    try {
+      await autoUpdater.checkForUpdates();
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? String(err) };
+    }
+  });
+  ipcMain.handle('update:install', async () => {
+    // quitAndInstall is synchronous — it quits the app and runs the installer.
+    // The renderer will be torn down as part of the quit. No response sent.
+    try {
+      autoUpdater.quitAndInstall();
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? String(err) };
+    }
+  });
+  ipcMain.handle('update:dismiss', async () => {
+    // No-op on the main side — the renderer tracks dismissal in its own state.
+    // We expose this so the UI has a clean async "I dismissed it" call.
+    return { ok: true };
+  });
 }
 
 async function requireCodeSession(sessionId: string): Promise<CodeSession> {

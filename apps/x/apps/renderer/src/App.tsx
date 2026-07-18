@@ -28,6 +28,7 @@ import { useDebounce } from './hooks/use-debounce';
 import { SidebarContentPanel } from '@/components/sidebar-content'
 // (Product tour removed — onboarding lands the user directly);
 import { SuggestedTopicsView } from '@/components/suggested-topics-view';
+import { UpdateNotification } from '@/components/update-notification';
 import { LiveNotesView } from '@/components/live-notes-view';
 import { BgTasksView } from '@/components/bg-tasks-view';
 import { AppsView } from '@/components/apps/apps-view';
@@ -7117,6 +7118,10 @@ function App() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* In-app auto-update notification banner (bottom-right toast).
+          Listens to update:* IPC events from main's autoUpdater bridge. */}
+      <UpdateNotification />
     </TooltipProvider>
   )
 }

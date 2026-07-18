@@ -12,7 +12,8 @@ import {
   startWorkspaceWatcher,
   stopRunsWatcher,
   stopServicesWatcher,
-  stopWorkspaceWatcher
+  stopWorkspaceWatcher,
+  registerUpdateIpc,
 } from "./ipc.js";
 import { disposeAllTerminals } from "./terminal.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -365,22 +366,32 @@ app.whenReady().then(async () => {
   // Uses hazel (https://github.com/vercel/hazel) — the public Electron update
   // service hosted by Vercel at https://electron-update.vercel.app. It polls
   // the GitHub releases of the repo every 10 minutes and, when a new release
-  // is published, all running desktop instances see it within ~10 min and get
-  // a native "Update available" dialog. Clicking "Update" downloads + installs
-  // the new version in the background and restarts the app.
+  // is published, all running desktop instances see it within ~10 min.
+  //
+  // We DON'T use the built-in notifyUser dialog — instead we forward events
+  // to the renderer (see ipc.ts 'update:*' handlers) and show a custom in-app
+  // banner. This gives us control over the UX (toast position, "What's new"
+  // text, dismiss behavior) instead of a generic OS dialog.
   //
   // To ship an update: tag a new release (e.g. v0.1.3), push it, the
   // electron-build GitHub Action builds the installers and uploads them to
   // the release. Hazel picks up the new release within 10 minutes and
   // notifies all users automatically. No manual deploy step needed.
+  //
+  // NOTE: hazel only checks releases, NOT commits. Pushing to main without
+  // creating a release does NOT trigger update notifications — users only
+  // see an update when you explicitly create a GitHub release.
   if (app.isPackaged) {
     updateElectronApp({
       updateSource: {
         type: UpdateSourceType.ElectronPublicUpdateService,
         repo: "ufuomazech62-cpu/divinityworks-desktop",
       },
-      notifyUser: true, // Shows native dialog when update is available
+      notifyUser: false, // We forward events to the renderer for a custom UI
     });
+    // Register the IPC bridge that forwards autoUpdater events to the
+    // renderer and handles update:check / update:install / update:dismiss.
+    registerUpdateIpc();
   }
 
   // The agent-slack CLI ships bundled with the app (.package/dist/agent-slack.cjs)
