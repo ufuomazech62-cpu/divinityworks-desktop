@@ -21,6 +21,8 @@ import { googleAuth } from './auth/google.js';
 import { api } from './api/me.js';
 import { llm } from './api/llm.js';
 import { composio } from './api/composio.js';
+import { tts } from './api/tts.js';
+import { handleDeepgramWebSocket } from './api/deepgram-ws.js';
 import { dashboardPage, signinPage, signupPage } from './pages/dashboard.js';
 import type { Env, AuthVars } from './lib/env.js';
 
@@ -40,16 +42,22 @@ app.get('/health', (c) => c.json({ ok: true, env: c.env.ENV, time: Date.now() })
 // ---------- unauthenticated public config (consumed by the desktop app) ----------
 app.get('/v1/config', (c) => c.json({
   appUrl: 'https://dash.divinityworks.space',
-  websocketApiUrl: '',
-  supabaseUrl: '',  // deprecated field, kept for desktop schema compat
+  websocketApiUrl: 'wss://dash.divinityworks.space',
+  supabaseUrl: '',
   auth: {
     issuer: 'https://dash.divinityworks.space',
-    flows: ['email-password'],  // v2 will add 'google'
+    flows: ['google'],
   },
   billing: { plans: [] },
   llm: {
     baseUrl: 'https://dash.divinityworks.space/api/llm',
     defaultModel: c.env.LLM_DEFAULT_MODEL,
+  },
+  voice: {
+    sttModel: 'nova-3',
+    ttsModel: 'aura-asteria-en',
+    ttsUrl: 'https://dash.divinityworks.space/api/tts',
+    sttWsUrl: 'wss://dash.divinityworks.space/deepgram/v1/listen',
   },
 }));
 
@@ -85,6 +93,12 @@ app.route('/auth', googleAuth); // Google OAuth routes: /auth/google, /auth/goog
 app.route('/api', api);
 app.route('/api/llm', llm);
 app.route('/api/composio', composio);
+app.route('/api/tts', tts);
+
+// ---------- Deepgram WebSocket proxy (STT) ----------
+// The desktop app connects to wss://dash.divinityworks.space/deepgram/v1/listen
+// and streams mic audio. The Worker forwards to Deepgram with the company key.
+app.all('/deepgram/*', (c) => handleDeepgramWebSocket(c.req.raw, c.env));
 
 // ---------- dashboard pages (HTML) ----------
 app.get('/', (c) => c.html(dashboardPage()));

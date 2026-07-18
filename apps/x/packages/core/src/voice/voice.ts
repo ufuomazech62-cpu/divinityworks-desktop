@@ -32,27 +32,39 @@ export async function getVoiceConfig(): Promise<VoiceConfig> {
     };
 }
 
-async function resolveTtsEndpoint(streaming: boolean): Promise<{ url: string; headers: Record<string, string> }> {
+/**
+ * Resolve the TTS endpoint. When the user is signed in to Divinity, we use
+ * the SaaS Worker's /api/tts proxy (Deepgram Aura) with the company key.
+ * When not signed in, fall back to BYOK (user's own ElevenLabs key in
+ * ~/.rowboat/config/elevenlabs.json).
+ */
+async function resolveTtsEndpoint(streaming: boolean): Promise<{ url: string; headers: Record<string, string>; body: string }> {
     const config = await getVoiceConfig();
     const signedIn = await isSignedIn();
 
     if (signedIn) {
-        const voiceId = config.elevenlabs?.voiceId || 's3TPKV1kjDlVtZbl4Ksh';
+        // Use the SaaS Worker's Deepgram Aura TTS proxy. The company's
+        // Deepgram key is injected server-side — the desktop never sees it.
         const accessToken = await getAccessToken();
-        // The proxy has no dedicated /stream route — the same endpoint is
-        // used and the body is consumed progressively; if the proxy buffers,
-        // streaming degrades to today's full-body latency, never worse.
+        const url = streaming
+            ? `${API_URL}/api/tts/stream`
+            : `${API_URL}/api/tts`;
         return {
-            url: `${API_URL}/v1/voice/text-to-speech/${voiceId}`,
+            url,
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+                text: '', // filled by caller
+                model: 'aura-asteria-en',
+            }),
         };
     }
 
+    // BYOK fallback — user has their own ElevenLabs key
     if (!config.elevenlabs) {
-        throw new Error(`ElevenLabs not configured. Create ${path.join(WorkDir, 'config', 'elevenlabs.json')} with { "apiKey": "<your-key>" }`);
+        throw new Error('Voice output requires sign-in. Sign in to Divinity to use voice.');
     }
     const voiceId = config.elevenlabs.voiceId || 's3TPKV1kjDlVtZbl4Ksh';
     return {
@@ -61,28 +73,26 @@ async function resolveTtsEndpoint(streaming: boolean): Promise<{ url: string; he
             'xi-api-key': config.elevenlabs.apiKey,
             'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+            text: '',
+            model_id: 'eleven_flash_v2_5',
+            voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+        }),
     };
 }
 
-function ttsRequestBody(text: string): string {
-    return JSON.stringify({
-        text,
-        model_id: 'eleven_flash_v2_5',
-        voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-        },
-    });
-}
-
 export async function synthesizeSpeech(text: string): Promise<{ audioBase64: string; mimeType: string }> {
-    const { url, headers } = await resolveTtsEndpoint(false);
-    console.log('[voice] synthesizing speech, text length:', text.length);
+    const { url, headers, body: bodyTemplate } = await resolveTtsEndpoint(false);
+    console.log('[voice] synthesizing speech via SaaS Worker, text length:', text.length);
+
+    // Inject the text into the body
+    const body = JSON.parse(bodyTemplate);
+    body.text = text;
 
     const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: ttsRequestBody(text),
+        body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -93,27 +103,31 @@ export async function synthesizeSpeech(text: string): Promise<{ audioBase64: str
 
     const arrayBuffer = await response.arrayBuffer();
     const audioBase64 = Buffer.from(arrayBuffer).toString('base64');
+    const contentType = response.headers.get('content-type') || 'audio/mpeg';
     console.log('[voice] synthesized audio, base64 length:', audioBase64.length);
-    return { audioBase64, mimeType: 'audio/mpeg' };
+    return { audioBase64, mimeType: contentType };
 }
 
 /**
- * Streaming synthesis: invokes `onChunk` with MP3 bytes as they arrive so
- * playback can start on the first chunk. Resolves when the stream ends;
- * rejects on HTTP/stream errors. Abort via the provided signal.
+ * Streaming synthesis: invokes `onChunk` with audio bytes as they arrive so
+ * playback can start immediately. Resolves when the stream ends; rejects on
+ * HTTP/stream errors. Abort via the provided signal.
  */
 export async function synthesizeSpeechStream(
     text: string,
     onChunk: (chunk: Buffer) => void,
     signal?: AbortSignal,
 ): Promise<void> {
-    const { url, headers } = await resolveTtsEndpoint(true);
-    console.log('[voice] streaming speech synthesis, text length:', text.length);
+    const { url, headers, body: bodyTemplate } = await resolveTtsEndpoint(true);
+    console.log('[voice] streaming speech synthesis via SaaS Worker, text length:', text.length);
+
+    const body = JSON.parse(bodyTemplate);
+    body.text = text;
 
     const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: ttsRequestBody(text),
+        body: JSON.stringify(body),
         signal: signal ?? null,
     });
 
