@@ -360,12 +360,24 @@ app.whenReady().then(async () => {
   // serves workspace files via app://workspace/<rel-path> for media previews.
   registerAppProtocol();
 
-  // Initialize auto-updater (only in production)
+  // Initialize auto-updater (only in production).
+  //
+  // Uses hazel (https://github.com/vercel/hazel) — the public Electron update
+  // service hosted by Vercel at https://electron-update.vercel.app. It polls
+  // the GitHub releases of the repo every 10 minutes and, when a new release
+  // is published, all running desktop instances see it within ~10 min and get
+  // a native "Update available" dialog. Clicking "Update" downloads + installs
+  // the new version in the background and restarts the app.
+  //
+  // To ship an update: tag a new release (e.g. v0.1.3), push it, the
+  // electron-build GitHub Action builds the installers and uploads them to
+  // the release. Hazel picks up the new release within 10 minutes and
+  // notifies all users automatically. No manual deploy step needed.
   if (app.isPackaged) {
     updateElectronApp({
       updateSource: {
         type: UpdateSourceType.ElectronPublicUpdateService,
-        repo: "divinityworks/divinity",
+        repo: "ufuomazech62-cpu/divinityworks-desktop",
       },
       notifyUser: true, // Shows native dialog when update is available
     });
