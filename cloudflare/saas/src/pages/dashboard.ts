@@ -1,13 +1,15 @@
 /**
  * HTML pages for the dashboard. Google-only sign-in — no email/password.
- * The logo is an inline SVG (the black "D" mark with white border) so it
- * loads instantly with no external requests.
+ * The logo is loaded from the same R2-hosted PNG that the landing page uses,
+ * so branding is 100% consistent across all surfaces.
  */
 
-const LOGO_SVG = `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1024" height="1024" rx="224" fill="#0a0a0a" stroke="#fff" stroke-width="24"/>
-  <path fill="#fff" d="M 200 200 L 200 824 Q 200 900 276 900 L 500 900 Q 700 900 820 780 Q 940 660 940 500 Q 940 340 820 220 Q 700 100 500 100 L 276 100 Q 200 100 200 176 Z M 350 250 L 500 250 Q 640 250 720 340 Q 800 430 800 500 Q 800 570 720 660 Q 640 750 500 750 L 350 750 Z"/>
-</svg>`;
+// Logo URL — served from R2 via the landing page worker's /i/ route.
+// This is the SAME logo that appears on divinityworks.space, just at a
+// smaller size. Consistent branding across landing + dashboard + desktop.
+const LOGO_URL = 'https://divinityworks.space/i/logo.png';
+const LOGO_IMG = `<img src="${LOGO_URL}" alt="Divinity" width="64" height="64" style="border-radius:14px;" />`;
+const LOGO_IMG_SM = `<img src="${LOGO_URL}" alt="Divinity" width="28" height="28" style="border-radius:7px;" />`;
 
 const GOOGLE_ICON = `<svg viewBox="0 0 24 24" width="20" height="20">
   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -68,7 +70,7 @@ const SHELL = (title: string, body: string) => `<!DOCTYPE html>
 <body>
   <header class="nav">
     <a class="brand" href="/">
-      <span class="brand__mark">${LOGO_SVG}</span>
+      <span class="brand__mark">${LOGO_IMG_SM}</span>
       <span>Divinity<span class="brand__sub">Works</span></span>
     </a>
     <nav class="nav__links">
@@ -84,7 +86,7 @@ const SHELL = (title: string, body: string) => `<!DOCTYPE html>
 export function signinPage(): string {
   return SHELL('Sign in', `
     <div class="card">
-      <div class="logo">${LOGO_SVG}</div>
+      <div class="logo">${LOGO_IMG}</div>
       <h1>Sign in to Divinity</h1>
       <p>Use your Google account to continue.</p>
       <a id="google-btn" href="/auth/google" class="google-btn">
@@ -111,7 +113,7 @@ export function signupPage(): string {
 export function dashboardPage(): string {
   return SHELL('Dashboard', `
     <div class="card">
-      <div class="logo">${LOGO_SVG}</div>
+      <div class="logo">${LOGO_IMG}</div>
       <h1>Divinity Works</h1>
       <p>The desktop app is where the work happens. This dashboard is for managing your account.</p>
       <div id="content" style="margin-top: 32px;">
