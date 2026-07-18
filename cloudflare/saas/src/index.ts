@@ -17,6 +17,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { auth } from './auth/auth.js';
+import { googleAuth } from './auth/google.js';
 import { api } from './api/me.js';
 import { llm } from './api/llm.js';
 import { composio } from './api/composio.js';
@@ -78,6 +79,7 @@ app.all('/v1/composio/*', async (c) => {
 
 // ---------- auth routes ----------
 app.route('/auth', auth);
+app.route('/auth', googleAuth); // Google OAuth routes: /auth/google, /auth/google/callback
 
 // ---------- API routes (require Bearer token) ----------
 app.route('/api', api);

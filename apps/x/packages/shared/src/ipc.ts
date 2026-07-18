@@ -2201,11 +2201,17 @@ const ipcSchemas = {
     res: z.null(),
   },
   'update:downloaded': {
-    req: z.null(),
+    req: z.object({
+      version: z.string(),
+      releaseNotes: z.string().nullable().optional(),
+      releaseDate: z.string().nullable().optional(),
+    }),
     res: z.null(),
   },
   'update:error': {
-    req: z.null(),
+    req: z.object({
+      message: z.string(),
+    }),
     res: z.null(),
   },
 } as const;

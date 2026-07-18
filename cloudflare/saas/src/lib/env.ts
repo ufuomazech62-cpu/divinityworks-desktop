@@ -13,6 +13,8 @@ export interface Env {
   JWT_SECRET: string;
   OPENROUTER_API_KEY: string;
   COMPOSIO_API_KEY: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
   RESEND_API_KEY?: string;
