@@ -2165,6 +2165,49 @@ const ipcSchemas = {
       success: z.literal(true),
     }),
   },
+  // ---- Auto-update channels ----
+  // Renderer -> main (invoke/handle pattern)
+  'update:check': {
+    req: z.null(),
+    res: z.object({
+      ok: z.boolean(),
+      error: z.string().optional(),
+    }),
+  },
+  'update:install': {
+    req: z.null(),
+    res: z.object({
+      ok: z.boolean(),
+      error: z.string().optional(),
+    }),
+  },
+  'update:dismiss': {
+    req: z.null(),
+    res: z.object({
+      ok: z.boolean(),
+    }),
+  },
+  // Main -> renderer (send/on pattern, fire-and-forget)
+  'update:checking': {
+    req: z.null(),
+    res: z.null(),
+  },
+  'update:available': {
+    req: z.null(),
+    res: z.null(),
+  },
+  'update:not-available': {
+    req: z.null(),
+    res: z.null(),
+  },
+  'update:downloaded': {
+    req: z.null(),
+    res: z.null(),
+  },
+  'update:error': {
+    req: z.null(),
+    res: z.null(),
+  },
 } as const;
 
 // ============================================================================

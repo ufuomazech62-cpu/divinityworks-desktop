@@ -702,30 +702,10 @@ export function registerUpdateIpc(): void {
     });
   });
 
-  // Renderer -> main handlers.
-  ipcMain.handle('update:check', async () => {
-    try {
-      await autoUpdater.checkForUpdates();
-      return { ok: true };
-    } catch (err: any) {
-      return { ok: false, error: err?.message ?? String(err) };
-    }
-  });
-  ipcMain.handle('update:install', async () => {
-    // quitAndInstall is synchronous — it quits the app and runs the installer.
-    // The renderer will be torn down as part of the quit. No response sent.
-    try {
-      autoUpdater.quitAndInstall();
-      return { ok: true };
-    } catch (err: any) {
-      return { ok: false, error: err?.message ?? String(err) };
-    }
-  });
-  ipcMain.handle('update:dismiss', async () => {
-    // No-op on the main side — the renderer tracks dismissal in its own state.
-    // We expose this so the UI has a clean async "I dismissed it" call.
-    return { ok: true };
-  });
+  // Note: the invoke handlers (update:check, update:install, update:dismiss)
+  // are registered in setupIpcHandlers() below, not here — the IPC type system
+  // requires all invoke channels to be in the handlers object passed to
+  // registerIpcHandlers().
 }
 
 async function requireCodeSession(sessionId: string): Promise<CodeSession> {
@@ -2436,6 +2416,26 @@ export function setupIpcHandlers() {
     'notifications:setSettings': async (_event, args) => {
       saveNotificationSettings(args);
       return { success: true };
+    },
+    // Auto-update handlers (forward to autoUpdater)
+    'update:check': async () => {
+      try {
+        await autoUpdater.checkForUpdates();
+        return { ok: true };
+      } catch (err: any) {
+        return { ok: false, error: err?.message ?? String(err) };
+      }
+    },
+    'update:install': async () => {
+      try {
+        autoUpdater.quitAndInstall();
+        return { ok: true };
+      } catch (err: any) {
+        return { ok: false, error: err?.message ?? String(err) };
+      }
+    },
+    'update:dismiss': async () => {
+      return { ok: true };
     },
     // Embedded browser handlers (WebContentsView + navigation)
     ...browserIpcHandlers,
