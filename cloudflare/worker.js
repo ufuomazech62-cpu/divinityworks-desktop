@@ -7,9 +7,10 @@ const ASSET_BASE = 'https://raw.githubusercontent.com/ufuomazech62-cpu/divinityw
 
 // Map of OS -> installer filename in R2 (releases/v0.1.4/ prefix)
 const INSTALLERS = {
-  mac:    'Divinity-darwin-arm64-0.1.4.dmg',
-  windows:'Divinity-win32-x64-0.1.4-setup.exe',
-  linux:  'divinity-linux_0.1.4_amd64.deb',
+  mac:        'Divinity-darwin-arm64-0.1.4.dmg',  // Apple Silicon (M1/M2/M3/M4)
+  'mac-intel':'Divinity-darwin-x64-0.1.4.dmg',     // Intel Macs
+  windows:    'Divinity-win32-x64-0.1.4-setup.exe',
+  linux:      'divinity-linux_0.1.4_amd64.deb',
 };
 
 async function handle(request) {
@@ -809,7 +810,12 @@ img, svg { display: block; max-width: 100%; }
           <a class="os-card" href="/download/mac" data-os="mac">
             <span class="os-card__icon"><img src="/i/apple.svg" alt="" /></span>
             <span class="os-card__name">Mac</span>
-            <span class="os-card__meta">.dmg · Apple Silicon</span>
+            <span class="os-card__meta">Apple Silicon · .dmg</span>
+          </a>
+          <a class="os-card" href="/download/mac-intel" data-os="mac-intel">
+            <span class="os-card__icon"><img src="/i/apple.svg" alt="" /></span>
+            <span class="os-card__name">Mac (Intel)</span>
+            <span class="os-card__meta">Intel · .dmg</span>
           </a>
           <a class="os-card" href="/download/windows" data-os="windows">
             <span class="os-card__icon"><img src="/i/windows.svg" alt="" /></span>
@@ -822,7 +828,7 @@ img, svg { display: block; max-width: 100%; }
             <span class="os-card__meta">.deb · amd64</span>
           </a>
         </div>
-        <p class="download__platforms">v0.1.4 · Also available for Linux ARM64 and Intel Mac</p>
+        <p class="download__platforms">v0.1.4</p>
       </div>
     </section>
   </main>
