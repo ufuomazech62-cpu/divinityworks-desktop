@@ -68,6 +68,13 @@ app.all('/v1/llm/*', async (c) => {
   const newReq = new Request(newUrl, c.req.raw);
   return app.fetch(newReq, c.env, c.executionCtx);
 });
+// /v1/composio/* -> /api/composio/* (desktop app calls /v1/composio/* when signed in)
+app.all('/v1/composio/*', async (c) => {
+  const newUrl = new URL(c.req.url);
+  newUrl.pathname = c.req.path.replace('/v1/composio', '/api/composio');
+  const newReq = new Request(newUrl, c.req.raw);
+  return app.fetch(newReq, c.env, c.executionCtx);
+});
 
 // ---------- auth routes ----------
 app.route('/auth', auth);

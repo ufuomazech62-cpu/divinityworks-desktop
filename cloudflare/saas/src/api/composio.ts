@@ -29,8 +29,9 @@ async function proxy(c: Context): Promise<Response> {
   reqHeaders.delete('authorization');
   reqHeaders.delete('host');
   reqHeaders.delete('cookie');
-  // Use OUR Composio key, not the user's
-  reqHeaders.set('x_api_key', c.env.COMPOSIO_API_KEY);
+  // Use OUR Composio key, not the user's. Composio v3 expects `x-api-key`
+  // (dashes) — underscores are silently rejected with "No authentication provided".
+  reqHeaders.set('x-api-key', c.env.COMPOSIO_API_KEY);
   // Identify the user to Composio for tracking/audit
   const user = c.get('user')!;
   reqHeaders.set('x-divinity-user-id', user.id);
