@@ -2,14 +2,14 @@ addEventListener('fetch', (event) => {
   event.respondWith(handle(event.request));
 });
 
-const RELEASE_BASE = 'https://github.com/ufuomazech62-cpu/divinityworks-desktop/releases/download/v0.1.1';
+const RELEASE_BASE = 'https://github.com/ufuomazech62-cpu/divinityworks-desktop/releases/download/v0.1.2';
 const ASSET_BASE = 'https://raw.githubusercontent.com/ufuomazech62-cpu/divinityworks-desktop/main/assets';
 
-// Map of OS -> installer filename in R2 (releases/v0.1.1/ prefix)
+// Map of OS -> installer filename in R2 (releases/v0.1.2/ prefix)
 const INSTALLERS = {
-  mac:    'Divinity-darwin-arm64-0.1.1.dmg',
-  windows:'Divinity-win32-x64-0.1.1-setup.exe',
-  linux:  'divinity-linux_0.1.1_amd64.deb',
+  mac:    'Divinity-darwin-arm64-0.1.2.dmg',
+  windows:'Divinity-win32-x64-0.1.2-setup.exe',
+  linux:  'divinity-linux_0.1.2_amd64.deb',
 };
 
 async function handle(request) {
@@ -21,9 +21,9 @@ async function handle(request) {
     const key = url.pathname.replace('/download/', '');
     let objectKey;
     if (INSTALLERS[key]) {
-      objectKey = 'releases/v0.1.1/' + INSTALLERS[key];
+      objectKey = 'releases/v0.1.2/' + INSTALLERS[key];
     } else if (Object.values(INSTALLERS).includes(key)) {
-      objectKey = 'releases/v0.1.1/' + key;
+      objectKey = 'releases/v0.1.2/' + key;
     } else {
       return new Response('Not found', { status: 404 });
     }
@@ -822,7 +822,7 @@ img, svg { display: block; max-width: 100%; }
             <span class="os-card__meta">.deb · amd64</span>
           </a>
         </div>
-        <p class="download__platforms">v0.1.1 · Also available for Linux ARM64 and Intel Mac</p>
+        <p class="download__platforms">v0.1.2 · Also available for Linux ARM64 and Intel Mac</p>
       </div>
     </section>
   </main>
