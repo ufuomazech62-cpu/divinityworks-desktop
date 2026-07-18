@@ -16,12 +16,12 @@ import { X, Download, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'luci
  *      (no version info yet — Electron doesn't pass it in this event)
  *   3. User clicks Update now -> renderer calls 'update:install' IPC
  *      -> autoUpdater starts downloading in the background
- *      -> banner switches to "Downloading…" (no progress %, just spinner)
- *   4. Download completes -> 'update:downloaded' -> banner switches to
- *      "Ready to install — v0.1.3" with [Restart now] button
- *      (version arrives in this event as releaseName)
- *   5. User clicks Restart now -> 'update:install' IPC (quitAndInstall)
+ *      -> banner switches to "Downloading… will restart automatically"
+ *      (no progress %, just spinner)
+ *   4. Download completes -> 'update:downloaded' -> auto-restart after 3s
+ *      -> banner shows "Restarting…" with countdown
  *      -> app quits, installer runs, app relaunches into the new version
+ *      (no user action required — fully automatic)
  *
  * If the user clicks Later, the banner dismisses for the current session.
  * It will reappear next time the app starts if the update is still pending.
@@ -33,8 +33,11 @@ type UpdateState =
   | { kind: 'idle' }
   | { kind: 'available' }
   | { kind: 'downloading' }
+  | { kind: 'restarting'; version: string; secondsLeft: number }
   | { kind: 'ready'; version: string; releaseNotes?: string | null }
   | { kind: 'error'; message: string };
+
+const AUTO_RESTART_SECONDS = 3;
 
 export function UpdateNotification() {
   const [state, setState] = useState<UpdateState>({ kind: 'idle' });
@@ -66,8 +69,8 @@ export function UpdateNotification() {
 
     cleanups.push(
       window.ipc.on('update:downloaded', (event: { version: string; releaseNotes?: string | null }) => {
-        console.log(`[update] downloaded: v${event.version}, ready to install`);
-        setState({ kind: 'ready', version: event.version, releaseNotes: event.releaseNotes });
+        console.log(`[update] downloaded: v${event.version}, auto-restarting in ${AUTO_RESTART_SECONDS}s`);
+        setState({ kind: 'restarting', version: event.version, secondsLeft: AUTO_RESTART_SECONDS });
         setDismissed(false);
       })
     );
@@ -83,16 +86,40 @@ export function UpdateNotification() {
     return () => cleanups.forEach((cleanup) => cleanup());
   }, []);
 
+  // Auto-restart countdown — when 'restarting' state is entered, count down
+  // from AUTO_RESTART_SECONDS and call quitAndInstall when it hits 0.
+  useEffect(() => {
+    if (state.kind !== 'restarting') return;
+    if (state.secondsLeft <= 0) {
+      // Time's up — quit + install. This tears down the renderer.
+      void window.ipc.invoke('update:install', null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setState((prev) =>
+        prev.kind === 'restarting'
+          ? { ...prev, secondsLeft: prev.secondsLeft - 1 }
+          : prev
+      );
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [state]);
+
   const handleInstall = useCallback(async () => {
-    // For 'available' state: the IPC handler triggers checkForUpdates +
-    //   download (autoUpdater auto-downloads on update-available).
-    //   We switch to 'downloading' state to show the spinner.
-    // For 'ready' state: quitAndInstall is called.
+    // For 'available' state: trigger download (autoUpdater auto-downloads
+    //   when update-available fires; calling checkForUpdates again is a no-op
+    //   but the IPC handler kicks off the download if it hasn't started).
+    //   We switch to 'downloading' to show the spinner.
     if (state.kind === 'available') {
       setState({ kind: 'downloading' });
     }
     await window.ipc.invoke('update:install', null);
   }, [state.kind]);
+
+  const handleRestartNow = useCallback(async () => {
+    // Skip the countdown — restart immediately
+    await window.ipc.invoke('update:install', null);
+  }, []);
 
   const handleDismiss = useCallback(async () => {
     setDismissed(true);
@@ -100,8 +127,9 @@ export function UpdateNotification() {
   }, []);
 
   if (state.kind === 'idle') return null;
-  if (dismissed && state.kind !== 'ready') return null;
-  // 'ready' state can't be dismissed — user must restart or ignore (banner persists)
+  if (dismissed && state.kind !== 'restarting' && state.kind !== 'ready') return null;
+  // 'restarting' can't be dismissed (it's already happening)
+  // 'ready' state can be dismissed but only via the explicit "Later" button
 
   return (
     <div
@@ -206,10 +234,45 @@ export function UpdateNotification() {
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, marginBottom: '2px' }}>Downloading update…</div>
               <div style={{ fontSize: '13px', opacity: 0.7 }}>
-                Divinity will restart when the download is ready.
+                Divinity will restart automatically when ready.
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {state.kind === 'restarting' && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
+            <RefreshCw
+              size={18}
+              style={{ flexShrink: 0, marginTop: '1px', color: '#4ade80', animation: 'dw-update-spin 1s linear infinite' }}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                Restarting in {state.secondsLeft}s…
+              </div>
+              <div style={{ fontSize: '13px', opacity: 0.7, lineHeight: 1.45 }}>
+                Divinity v{state.version} is installed. The app will relaunch automatically.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleRestartNow}
+            style={{
+              width: '100%',
+              background: '#fff',
+              color: '#0a0a0a',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 14px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Restart now
+          </button>
         </div>
       )}
 
@@ -225,9 +288,23 @@ export function UpdateNotification() {
                 Divinity will restart to finish the update.
               </div>
             </div>
+            <button
+              onClick={handleDismiss}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'rgba(255,255,255,0.5)',
+                cursor: 'pointer',
+                padding: '2px',
+                marginTop: '-2px',
+              }}
+              aria-label="Dismiss"
+            >
+              <X size={16} />
+            </button>
           </div>
           <button
-            onClick={handleInstall}
+            onClick={handleRestartNow}
             style={{
               width: '100%',
               background: '#fff',
