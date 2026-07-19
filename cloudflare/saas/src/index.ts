@@ -22,8 +22,10 @@ import { api } from './api/me.js';
 import { llm } from './api/llm.js';
 import { composio } from './api/composio.js';
 import { tts } from './api/tts.js';
+import { cloud } from './api/cloud.js';
 import { handleDeepgramWebSocket } from './api/deepgram-ws.js';
 import { dashboardPage, signinPage, signupPage } from './pages/dashboard.js';
+import { cloudAppPage } from './pages/cloud-app.js';
 import type { Env, AuthVars } from './lib/env.js';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVars }>();
@@ -94,11 +96,16 @@ app.route('/api', api);
 app.route('/api/llm', llm);
 app.route('/api/composio', composio);
 app.route('/api/tts', tts);
+app.route('/api/cloud', cloud);
 
 // ---------- Deepgram WebSocket proxy (STT) ----------
-// The desktop app connects to wss://dash.divinityworks.space/deepgram/v1/listen
-// and streams mic audio. The Worker forwards to Deepgram with the company key.
 app.all('/deepgram/*', (c) => handleDeepgramWebSocket(c.req.raw, c.env));
+
+// ---------- Cloud Divinity app page (noVNC client) ----------
+// app.divinityworks.space → shows the loading screen → spawns container →
+// embeds noVNC iframe → user sees the full Divinity desktop in their browser.
+app.get('/app', (c) => c.html(cloudAppPage()));
+app.get('/app/*', (c) => c.html(cloudAppPage()));
 
 // ---------- dashboard pages (HTML) ----------
 app.get('/', (c) => c.html(dashboardPage()));
