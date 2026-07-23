@@ -15,7 +15,7 @@ process.env.ROWBOAT_WORKDIR = resolve(homedir(), '.divinity');
 initConfigs();
 
 // Import all the core functions — real direct-path imports matching apps/main/src/ipc.ts
-import { workspace, versionHistory, voice } from '@x/core';
+import { workspace, versionHistory, voice } from '@x/core/src/workspace/workspace';
 import * as runsCore from '@x/core/dist/runtime/legacy/runs.js';
 import { bus } from '@x/core/dist/runtime/legacy/bus.js';
 import { serviceBus } from '@x/core/dist/services/service_bus.js';
@@ -529,7 +529,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         
       // Workspace channels
       case 'workspace:getRoot':
-        result = workspace.getRoot();
+        result = await workspace.getRoot();
         break;
         
       case 'workspace:exists':
@@ -541,7 +541,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'workspace:readdir':
-        result = await workspace.readdir(validatedArgs.path, validatedArgs.opts);
+        result = await workspace.readdir(validatedArgs.path);
         break;
         
       case 'workspace:readFile':
@@ -549,7 +549,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'workspace:writeFile':
-        result = await workspace.writeFile(validatedArgs.path, validatedArgs.data, validatedArgs.opts);
+        result = await workspace.writeFile(validatedArgs.path, validatedArgs.content, validatedArgs.encoding);
         break;
         
       case 'workspace:mkdir':
@@ -557,11 +557,11 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'workspace:rename':
-        result = await workspace.rename(validatedArgs.from, validatedArgs.to, validatedArgs.overwrite);
+        result = await workspace.rename(validatedArgs.from, validatedArgs.to);
         break;
         
       case 'workspace:copy':
-        result = await workspace.copy(validatedArgs.from, validatedArgs.to, validatedArgs.overwrite);
+        result = await workspace.copy(validatedArgs.from, validatedArgs.to);
         break;
         
       case 'workspace:remove':

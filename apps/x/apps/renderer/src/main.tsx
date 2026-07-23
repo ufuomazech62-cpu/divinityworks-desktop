@@ -1,3 +1,8 @@
+// Web Preload Shim — must run before any React code so window.ipc exists.
+// In Electron this is injected via contextBridge; in the browser it sets up
+// the WebSocket connection to the bridge server.
+import './web-preload'
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
