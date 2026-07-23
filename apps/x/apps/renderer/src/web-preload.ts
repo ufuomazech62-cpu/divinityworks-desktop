@@ -22,6 +22,9 @@
     return proto + '//' + host + '/ws';
   })();
 
+  // Read the Worker JWT from localStorage (set by dash.divinityworks.space/app redirect)
+  var AUTH_TOKEN = localStorage.getItem('dw_access_token') || '';
+
   // Pending invoke requests keyed by reqId
   var pending = {};
 
@@ -36,7 +39,10 @@
 
   function connect() {
     try {
-      ws = new WebSocket(WS_URL);
+      // Pass auth token as subprotocol so the server can read it
+      ws = AUTH_TOKEN
+        ? new WebSocket(WS_URL, ['bearer', AUTH_TOKEN])
+        : new WebSocket(WS_URL);
     } catch (e) {
       console.error('[web-preload] Cannot create WebSocket:', e);
       setTimeout(connect, 2000);

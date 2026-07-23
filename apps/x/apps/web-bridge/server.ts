@@ -425,8 +425,23 @@ function unsubscribeClient(client: WebSocket, channel: string): void {
 }
 
 // Handle incoming WebSocket messages
-wss.on('connection', (ws: WebSocket) => {
-  console.log('New client connected');
+// Extract auth token from WebSocket subprotocol (passed by web-preload shim)
+const clientAuthTokens = new Map<WebSocket, string>();
+
+wss.on('connection', (ws: WebSocket, req: any) => {
+  // Read auth token from subprotocol: ['bearer', '<token>']
+  let authToken = '';
+  if (req.headers['sec-websocket-protocol']) {
+    const protocols = req.headers['sec-websocket-protocol'].split(',').map((s: string) => s.trim());
+    if (protocols[0] === 'bearer' && protocols[1]) {
+      authToken = protocols[1];
+    }
+  }
+  if (authToken) {
+    clientAuthTokens.set(ws, authToken);
+  }
+  
+  console.log('New client connected', authToken ? '(authenticated)' : '(anonymous)');
   clients.add(ws);
   
   ws.on('message', (data) => {
@@ -463,6 +478,7 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('close', () => {
     console.log('Client disconnected');
     clients.delete(ws);
+    clientAuthTokens.delete(ws);
     
     // Clean up subscriptions
     for (const [channel, subscribers] of subscriptions) {
@@ -1048,12 +1064,19 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       // OAuth channels
-      case 'oauth:connect':
+      case 'oauth:connect': {
+        // In web mode, if user has no local Electron auth, redirect to dashboard
+        const workerToken = clientAuthTokens.get(ws) || '';
+        if (!workerToken && validatedArgs.provider === 'rowboat') {
+          result = { redirect: 'https://dash.divinityworks.space/signin' };
+          break;
+        }
         const credentials = validatedArgs.clientId && validatedArgs.clientSecret
           ? { clientId: validatedArgs.clientId.trim(), clientSecret: validatedArgs.clientSecret.trim() }
           : undefined;
         result = await connectProvider(validatedArgs.provider, credentials);
         break;
+      }
         
       case 'oauth:disconnect':
         result = await disconnectProvider(validatedArgs.provider);
@@ -1071,7 +1094,15 @@ async function handleInvoke(ws: WebSocket, message: any) {
       }
         
       // Account channels
-      case 'account:getRowboat':
+      case 'account:getRowboat': {
+        // Check if user has a Worker JWT (from dash.divinityworks.space Google OAuth)
+        const workerToken = clientAuthTokens.get(ws) || '';
+        if (workerToken) {
+          // User authenticated via Google OAuth on the dashboard — skip Electron auth
+          const config = await getRowboatConfig();
+          result = { signedIn: true, accessToken: workerToken, config };
+          break;
+        }
         const signedIn = await isSignedIn();
         if (!signedIn) {
           result = { signedIn: false, accessToken: null, config: null };
@@ -1085,6 +1116,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
           }
         }
         break;
+      }
         
       // Granola channels
       case 'granola:getConfig':
