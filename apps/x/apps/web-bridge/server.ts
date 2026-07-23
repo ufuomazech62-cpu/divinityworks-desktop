@@ -149,6 +149,7 @@ import { serviceBus } from '@x/core/dist/services/service_bus.js';
 import { EmitterSessionBus } from '@x/core/dist/runtime/sessions/bus.js';
 import { ITurnEventBus } from '@x/core/dist/runtime/turns/event-hub.js';
 import { isDurableTurnEvent } from '@x/shared/dist/turns.js';
+import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
 
 // Import types
 import type { ISessions, EmitterSessionBus as SessionBusType } from '@x/core/dist/runtime/sessions/index.js';
@@ -197,7 +198,6 @@ const electronStubs = {
 import { createServer } from 'http';
 import { extname, join } from 'path';
 import { readFile, stat } from 'fs/promises';
-
 const RENDERER_DIST = resolve(__dirname, '../renderer/dist-web');
 
 const MIME_TYPES: Record<string, string> = {
@@ -547,12 +547,12 @@ async function handleInvoke(ws: WebSocket, message: any) {
         
       // Runs channels
       case 'runs:create':
-        import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
+
         result = await runsCore.createRun(validatedArgs);
         break;
         
       case 'runs:createMessage':
-        import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
+
         const messageId = await runsCore.createMessage(
           validatedArgs.runId, 
           validatedArgs.message, 
@@ -568,40 +568,40 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'runs:authorizePermission':
-        import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
+
         await runsCore.authorizePermission(validatedArgs.runId, validatedArgs.authorization);
         result = { success: true };
         break;
         
       case 'runs:provideHumanInput':
-        import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
+
         await runsCore.replyToHumanInputRequest(validatedArgs.runId, validatedArgs.reply);
         result = { success: true };
         break;
         
       case 'runs:stop':
-        import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
+
         await runsCore.stop(validatedArgs.runId, validatedArgs.force);
         result = { success: true };
         break;
         
       case 'runs:fetch':
-        import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
+
         result = await runsCore.fetchRun(validatedArgs.runId);
         break;
         
       case 'runs:list':
-        import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
+
         result = await runsCore.listRuns(validatedArgs.cursor);
         break;
         
       case 'runs:listByWorkDir':
-        import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
+
         result = await runsCore.listRunsByWorkDir(validatedArgs.dir);
         break;
         
       case 'runs:delete':
-        import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
+
         await runsCore.deleteRun(validatedArgs.runId);
         result = { success: true };
         break;
