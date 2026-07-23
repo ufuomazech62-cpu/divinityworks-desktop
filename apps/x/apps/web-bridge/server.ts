@@ -14,148 +14,223 @@ process.env.ROWBOAT_WORKDIR = resolve(homedir(), '.divinity');
 // Initialize configs before using the container
 initConfigs();
 
-// Import all the core functions that are used in ipc.ts
-import { 
-  workspace,
-  versionHistory,
-  voice,
-} from '@x/core';
-
-import { 
+// Import all the core functions — real direct-path imports matching apps/main/src/ipc.ts
+import { workspace, versionHistory, voice } from '@x/core';
+import * as runsCore from '@x/core/dist/runtime/legacy/runs.js';
+import { bus } from '@x/core/dist/runtime/legacy/bus.js';
+import { serviceBus } from '@x/core/dist/services/service_bus.js';
+import { listOnboardingModels } from '@x/core/dist/models/models-dev.js';
+import { testModelConnection, listModelsForProvider, generateOneShot } from '@x/core/dist/models/models.js';
+import { getDefaultModelAndProvider } from '@x/core/dist/models/defaults.js';
+import { isSignedIn } from '@x/core/dist/account/account.js';
+import { listGatewayModels } from '@x/core/dist/models/gateway.js';
+import { invalidateCopilotInstructionsCache } from '@x/core/dist/runtime/assembly/copilot/instructions.js';
+import { triggerSync as triggerGranolaSync } from '@x/core/dist/knowledge/granola/sync.js';
+import { syncSlackKnowledgeSources, triggerSync as triggerSlackKnowledgeSync, getSlackKnowledgeSyncStatus } from '@x/core/dist/knowledge/sources/sync_slack.js';
+import { isOnboardingComplete, markOnboardingComplete } from '@x/core/dist/config/note_creation_config.js';
+import { loadNotificationSettings, saveNotificationSettings } from '@x/core/dist/config/notification_config.js';
+import * as appsIndexer from '@x/core/dist/apps/indexer.js';
+import * as appsServer from '@x/core/dist/apps/server.js';
+import * as appsAgents from '@x/core/dist/apps/agents.js';
+import * as githubAuth from '@x/core/dist/apps/github-auth.js';
+import * as appsStars from '@x/core/dist/apps/stars.js';
+import * as appsInstaller from '@x/core/dist/apps/installer.js';
+import { registryClient } from '@x/core/dist/apps/registry.js';
+import * as appsPublisher from '@x/core/dist/apps/publisher.js';
+import { runAgentSlack, getAgentSlackCliStatus, AgentSlackRunError } from '@x/core/dist/slack/agent-slack-exec.js';
+import { knowledgeSourcesRepo } from '@x/core/dist/knowledge/sources/repo.js';
+import { rankSlackHomeMessages } from '@x/core/dist/knowledge/sources/rank_slack_home.js';
+import { applyChannelsConfig, getChannelsStatus, logoutWhatsApp } from '@x/core/dist/channels/service.js';
+import { ensureEngine } from '@x/core/dist/code-mode/acp/engine-provisioner.js';
+import { checkCodeModeAgentStatus } from '@x/core/dist/code-mode/status.js';
+import { search } from '@x/core/dist/search/search.js';
+import { resolveMeetingPrep } from '@x/core/dist/knowledge/meeting_prep.js';
+import { readPrepNoteForEvent } from '@x/core/dist/knowledge/meeting_prep_brief.js';
+import { classifySchedule, processRowboatInstruction } from '@x/core/dist/knowledge/inline_tasks.js';
+import { getBillingInfo } from '@x/core/dist/billing/billing.js';
+import { summarizeMeeting } from '@x/core/dist/knowledge/summarize_meeting.js';
+import { getAccessToken } from '@x/core/dist/auth/tokens.js';
+import { getRowboatConfig } from '@x/core/dist/config/rowboat.js';
+import { runLiveNoteAgent } from '@x/core/dist/knowledge/live-note/runner.js';
+import {
   listImportantThreads,
   listEverythingElseThreads,
-  triggerGmailSync,
+  saveMessageBodyHeight,
+  triggerSync as triggerGmailSync,
   sendThreadReply,
   saveThreadDraft,
   deleteThreadDraft,
   listDraftThreads,
   searchThreads,
-  getGmailConnectionStatus,
-  getAccountEmail,
-  getAccountName,
-  setThreadImportance,
   archiveThread,
   trashThread,
   markThreadRead,
   downloadAttachment,
-  saveMessageBodyHeight,
-  searchGmailContacts,
-  warmSentContacts,
-  searchSentContacts,
+  getAccountEmail,
+  getAccountName,
+  getConnectionStatus as getGmailConnectionStatus,
+  setThreadImportance,
+} from '@x/core/dist/knowledge/sync_gmail.js';
+import { searchContacts as searchGmailContacts } from '@x/core/dist/knowledge/gmail_contacts.js';
+import { searchSentContacts } from '@x/core/dist/knowledge/gmail_sent_contacts.js';
+import {
   getGoogleDocsConnectionStatus,
   importGoogleDoc,
   syncGoogleDocDown,
   syncGoogleDocUp,
   getGoogleDocLink,
-  startManagedGooglePick,
-  liveNoteBus,
+} from '@x/core/dist/knowledge/google_docs.js';
+import { liveNoteBus } from '@x/core/dist/knowledge/live-note/bus.js';
+import { getInstallationId } from '@x/core/dist/analytics/installation.js';
+import { API_URL } from '@x/core/dist/config/env.js';
+import {
   fetchLiveNote,
   setLiveNote,
   setLiveNoteActive,
   deleteLiveNote,
   listLiveNotes,
-  runBackgroundTask,
-  backgroundTaskBus,
+} from '@x/core/dist/knowledge/live-note/fileops.js';
+import { runBackgroundTask } from '@x/core/dist/background-tasks/runner.js';
+import { backgroundTaskBus } from '@x/core/dist/background-tasks/bus.js';
+import {
   fetchTask,
   patchTask,
   createTask,
   deleteTask,
   listTasks,
-  readTaskRunIds,
-  search,
-  resolveMeetingPrep,
-  readPrepNoteForEvent,
-  invalidateKnowledgeIndex,
-  getBillingInfo,
-  summarizeMeeting,
-  getAccessToken,
-  getRowboatConfig,
-  runLiveNoteAgent,
-  listOnboardingModels,
-  testModelConnection,
-  listModelsForProvider,
-  getDefaultModelAndProvider,
-  generateOneShot,
-  isSignedIn,
-  listGatewayModels,
-  listProviders,
-  connectProvider,
-  disconnectProvider,
-  getInstallationId,
-  API_URL,
-  invalidateCopilotInstructionsCache,
-  triggerGranolaSync,
-  triggerSlackKnowledgeSync,
-  syncSlackKnowledgeSources,
-  getSlackKnowledgeSyncStatus,
-  isOnboardingComplete,
-  markOnboardingComplete,
-  loadNotificationSettings,
-  saveNotificationSettings,
-  classifySchedule,
-  processRowboatInstruction,
-  getGoogleDocsConnectionStatus,
-  runAgentSlack,
-  getAgentSlackCliStatus,
-  AgentSlackRunError,
-  parseWhoamiWorkspaces,
-  extractArrayPayload,
-  slackMessageText,
-  slackMessageAuthor,
-  extractSlackUserName,
-  resolveSlackUserName,
-  resolveSlackMessageText,
-  slackMessageUrl,
-  rankSlackHomeMessages,
-  knowledgeSourcesRepo,
-  appsIndexer,
-  appsServer,
-  appsAgents,
-  registryClient,
-  appsPublisher,
-  githubAuth,
-  appsStars,
-  appsInstaller,
-  capture,
-  qualifyAndDisconnectComposioGoogle,
-  triggerAgentScheduleRun,
-  getChannelsStatus,
-  logoutWhatsApp,
-  applyChannelsConfig,
-  listAgentSchedules,
-  getAgentScheduleState,
-  updateAgentSchedule,
-  deleteAgentSchedule,
-  ensureEngine,
-  checkCodeModeAgentStatus,
-  CodeSessionService,
-  CodeSessionStatusTracker,
-  CodePermissionRegistry,
-  codeGit,
-  readProjectDir,
-  readProjectFile,
-  disposeTerminal,
-  ensureTerminal,
-  writeTerminal,
-  resizeTerminal,
-  consumePendingDeepLink,
-} from '@x/core';
+  readRunIds as readTaskRunIds,
+} from '@x/core/dist/background-tasks/fileops.js';
+import { triggerRun as triggerAgentScheduleRun } from '@x/core/dist/agent-schedule/runner.js';
 
-// Import bus and serviceBus for event broadcasting
-import { bus } from '@x/core/dist/runtime/legacy/bus.js';
-import { serviceBus } from '@x/core/dist/services/service_bus.js';
-
-// Import session bus and turn event bus
-import { EmitterSessionBus } from '@x/core/dist/runtime/sessions/bus.js';
-import { ITurnEventBus } from '@x/core/dist/runtime/turns/event-hub.js';
-import { isDurableTurnEvent } from '@x/shared/dist/turns.js';
-import { runsCore } from '@x/core/dist/runtime/legacy/runs.js';
-
-// Import types
+// Type-only imports
 import type { ISessions, EmitterSessionBus as SessionBusType } from '@x/core/dist/runtime/sessions/index.js';
 import type { ITurnEventBus as TurnEventBusType } from '@x/core/dist/runtime/turns/event-hub.js';
 import type { CodeRunFeed } from '@x/core/dist/code-mode/feed.js';
 import type { CodeSession } from '@x/shared/dist/code-sessions.js';
+import { isDurableTurnEvent } from '@x/shared/dist/turns.js';
+
+// Stub implementations for functions that live in main/ local files (not in @x/core).
+// These are Electron-dependent; the web-bridge stubs them out.
+async function connectProvider(_provider: string, _credentials?: { clientId: string; clientSecret: string }) {
+  return { error: 'not_implemented' };
+}
+async function disconnectProvider(_provider: string) {
+  return { error: 'not_implemented' };
+}
+function listProviders() {
+  return [];
+}
+async function startManagedGooglePick(_targetFolder: string) {
+  return { error: 'not_implemented' };
+}
+function consumePendingDeepLink() {
+  return null;
+}
+
+// Local helper functions defined in ipc.ts (not exported from @x/core).
+// Copied here so the Slack handlers work without modification.
+function parseWhoamiWorkspaces(data: unknown): Array<{ url: string; name: string }> {
+  const parsed = (data ?? {}) as { workspaces?: Array<{ workspace_url?: string; workspace_name?: string }> };
+  return (parsed.workspaces || []).map((w) => ({
+    url: w.workspace_url || '',
+    name: w.workspace_name || '',
+  }));
+}
+
+function extractArrayPayload(parsed: unknown): unknown[] {
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && typeof parsed === 'object') {
+    const obj = parsed as Record<string, unknown>;
+    for (const key of ['messages', 'channels', 'items', 'results', 'data']) {
+      if (Array.isArray(obj[key])) return obj[key] as unknown[];
+    }
+  }
+  return [];
+}
+
+function slackMessageText(message: Record<string, unknown>): string {
+  const value = message.text ?? message.body ?? message.content;
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function slackMessageAuthor(message: Record<string, unknown>): string | undefined {
+  const value = message.username ?? message.user ?? message.author;
+  return typeof value === 'string' ? value : undefined;
+}
+
+function extractSlackUserName(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+  const profile = obj.profile && typeof obj.profile === 'object' ? obj.profile as Record<string, unknown> : undefined;
+  const user = obj.user && typeof obj.user === 'object' ? obj.user as Record<string, unknown> : undefined;
+  const userProfile = user?.profile && typeof user.profile === 'object' ? user.profile as Record<string, unknown> : undefined;
+  const candidates = [
+    profile?.display_name, profile?.real_name,
+    userProfile?.display_name, userProfile?.real_name,
+    obj.display_name, obj.displayName, obj.real_name, obj.realName,
+    user?.display_name, user?.displayName, user?.real_name, user?.realName,
+    obj.name, user?.name,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+  }
+  return null;
+}
+
+async function resolveSlackUserName(
+  userId: string,
+  workspaceUrl: string | undefined,
+  cache: Map<string, string>,
+): Promise<string | null> {
+  const key = `${workspaceUrl ?? ''}:${userId}`;
+  if (cache.has(key)) return cache.get(key) ?? null;
+  const args = ['user', 'get', userId];
+  if (workspaceUrl) args.push('--workspace', workspaceUrl);
+  const result = await runAgentSlack(args, { timeoutMs: 10000, maxBuffer: 512 * 1024 });
+  if (result.ok) {
+    const name = extractSlackUserName(result.data ?? {});
+    if (name) { cache.set(key, name); return name; }
+  } else {
+    console.warn(`[Slack] Failed to resolve user ${userId}: ${result.message}`);
+  }
+  cache.set(key, userId);
+  return null;
+}
+
+async function resolveSlackMessageText(
+  text: string,
+  workspaceUrl: string | undefined,
+  cache: Map<string, string>,
+): Promise<string> {
+  const matches = Array.from(text.matchAll(/<@([UW][A-Z0-9]+)(?:\|([^>]+))?>|@([UW][A-Z0-9]{6,})\b/g));
+  if (matches.length === 0) return text;
+  let resolved = text;
+  for (const match of matches) {
+    const userId = match[1] ?? match[3];
+    if (!userId) continue;
+    const fallback = match[2] ?? match[0];
+    const name = await resolveSlackUserName(userId, workspaceUrl, cache);
+    resolved = resolved.replaceAll(match[0], name ?? fallback);
+  }
+  return resolved;
+}
+
+async function resolveSlackAuthor(
+  author: string | undefined,
+  workspaceUrl: string | undefined,
+  cache: Map<string, string>,
+): Promise<string | undefined> {
+  if (!author) return undefined;
+  if (!/^[UW][A-Z0-9]{6,}$/.test(author)) return author;
+  return await resolveSlackUserName(author, workspaceUrl, cache) ?? author;
+}
+
+function slackMessageUrl(message: Record<string, unknown>, workspaceUrl: string | undefined, channelId: string | undefined, ts: string): string | undefined {
+  const direct = message.permalink ?? message.url;
+  if (typeof direct === 'string' && direct) return direct;
+  if (!workspaceUrl || !channelId) return undefined;
+  return `${workspaceUrl.replace(/\/$/, '')}/archives/${channelId}/p${ts.replace('.', '')}`;
+}
 
 // Stub Electron APIs
 const electronStubs = {
