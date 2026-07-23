@@ -638,11 +638,12 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       // Search channel
-      case 'search:query':
+      case 'search:query': {
         const sessions = container.resolve<ISessions>('sessions').listSessions()
           .map((s) => ({ sessionId: s.sessionId, title: s.title }));
         result = await search(validatedArgs.query, validatedArgs.limit, validatedArgs.types, sessions);
         break;
+      }
         
       // Gmail channels
       case 'gmail:getImportant':
@@ -982,11 +983,12 @@ async function handleInvoke(ws: WebSocket, message: any) {
         result = listProviders();
         break;
         
-      case 'oauth:getState':
+      case 'oauth:getState': {
         const oauthRepo = container.resolve('oauthRepo');
         const config = await oauthRepo.getClientFacingConfig();
         result = { config };
         break;
+      }
         
       // Account channels
       case 'account:getRowboat':
@@ -1280,7 +1282,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         result = knowledgeSourcesRepo.getConfig();
         break;
         
-      case 'knowledgeSources:upsert':
+      case 'knowledgeSources:upsert': {
         const config = knowledgeSourcesRepo.upsertSource(validatedArgs);
         if (validatedArgs.provider === 'slack') {
           invalidateCopilotInstructionsCache();
@@ -1291,7 +1293,8 @@ async function handleInvoke(ws: WebSocket, message: any) {
         }
         result = config;
         break;
-        
+      }
+
       // Onboarding channels
       case 'onboarding:getStatus':
         const complete = isOnboardingComplete();
@@ -1415,24 +1418,25 @@ async function handleInvoke(ws: WebSocket, message: any) {
         result = starResult;
         break;
         
-      case 'apps:catalogDetail':
+      case 'apps:catalogDetail': {
         const record = await registryClient.resolve(validatedArgs.name);
         if (!record) throw new Error(`no such app in the catalog: ${validatedArgs.name}`);
         let manifest;
         try { manifest = await registryClient.latestManifest(record); } catch { /* best effort */ }
-        let readme: string | undefined;
+        let catReadme: string | undefined;
         try {
           const res = await fetch(`https://raw.githubusercontent.com/${record.repo}/HEAD/README.md`);
-          if (res.ok) readme = await res.text();
+          if (res.ok) catReadme = await res.text();
         } catch { /* best effort */ }
         const installed = (await appsIndexer.listApps()).find((a) => a.install?.name === validatedArgs.name);
         result = {
           record,
           ...(manifest ? { manifest } : {}),
-          ...(readme ? { readme } : {}),
+          ...(catReadme ? { readme: catReadme } : {}),
           ...(installed ? { installedFolder: installed.folder } : {}),
         };
         break;
+      }
         
       case 'apps:install':
         const installRecord = await registryClient.resolve(validatedArgs.name);
