@@ -193,9 +193,92 @@ const electronStubs = {
   },
 };
 
-// WebSocket server setup
-const wss = new WebSocketServer({ port: 8790 });
-console.log('WebSocket bridge server listening on port 8790');
+// HTTP + WebSocket server setup
+import { createServer } from 'http';
+import { extname, join } from 'path';
+import { readFile, stat } from 'fs/promises';
+
+const RENDERER_DIST = resolve(__dirname, '../renderer/dist-web');
+
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.eot': 'application/vnd.ms-fontobject',
+  '.wasm': 'application/wasm',
+  '.map': 'application/json; charset=utf-8',
+};
+
+const httpServer = createServer(async (req, res) => {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  // Health check
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
+    return;
+  }
+
+  // Serve static files from renderer dist-web
+  let urlPath = req.url?.split('?')[0] || '/';
+  if (urlPath === '/') urlPath = '/web.html';
+
+  const filePath = join(RENDERER_DIST, urlPath);
+
+  try {
+    const fileStat = await stat(filePath);
+    if (fileStat.isFile()) {
+      const ext = extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      const data = await readFile(filePath);
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=3600',
+      });
+      res.end(data);
+      return;
+    }
+  } catch (e) {
+    // File not found — fall through to SPA fallback
+  }
+
+  // SPA fallback: serve web.html for unknown routes
+  try {
+    const fallbackPath = join(RENDERER_DIST, 'web.html');
+    const data = await readFile(fallbackPath);
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(data);
+  } catch (e) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not found');
+  }
+});
+
+const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+httpServer.listen(8790, () => {
+  console.log('Divinity web bridge listening on http://localhost:8790');
+  console.log('  Static files: ' + RENDERER_DIST);
+  console.log('  WebSocket: ws://localhost:8790/ws');
+});
 
 // Store connected clients and subscriptions
 const clients = new Set<WebSocket>();
