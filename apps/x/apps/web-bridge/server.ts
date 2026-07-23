@@ -15,7 +15,7 @@ process.env.ROWBOAT_WORKDIR = resolve(homedir(), '.divinity');
 initConfigs();
 
 // Import all the core functions — real direct-path imports matching apps/main/src/ipc.ts
-import { workspace, versionHistory, voice } from '@x/core/src/workspace/workspace';
+import { workspace, versionHistory, voice } from '@x/core';
 import * as runsCore from '@x/core/dist/runtime/legacy/runs.js';
 import { bus } from '@x/core/dist/runtime/legacy/bus.js';
 import { serviceBus } from '@x/core/dist/services/service_bus.js';
