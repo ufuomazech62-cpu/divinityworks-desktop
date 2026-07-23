@@ -18,8 +18,8 @@
   // ── WebSocket connection ──────────────────────────────────────────
   var WS_URL = (function () {
     var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var host = location.hostname;
-    return proto + '//' + host + ':8790/ws';
+    var host = location.host; // includes port if non-default (e.g. localhost:8790)
+    return proto + '//' + host + '/ws';
   })();
 
   // Pending invoke requests keyed by reqId
