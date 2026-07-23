@@ -107,8 +107,17 @@ app.all('/deepgram/*', (c) => handleDeepgramWebSocket(c.req.raw, c.env));
 app.get('/app', (c) => c.html(cloudAppPage()));
 app.get('/app/*', (c) => c.html(cloudAppPage()));
 
-// ---------- dashboard pages (HTML) ----------
-app.get('/', (c) => c.html(dashboardPage()));
+// ---------- routes ----------
+// / -> redirect to /app (authed) or /signin (not authed)
+app.get('/', async (c) => {
+  const auth = c.req.header('Authorization') || '';
+  const cookie = c.req.header('Cookie') || '';
+  // Quick token check — if they have a bearer token, go to the app
+  if (auth.startsWith('Bearer ') || cookie.includes('dw_access_token')) {
+    return c.redirect('/app', 302);
+  }
+  return c.redirect('/signin', 302);
+});
 app.get('/signin', (c) => c.html(signinPage()));
 app.get('/signup', (c) => c.html(signupPage()));
 

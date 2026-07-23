@@ -1,11 +1,12 @@
-import path from "path"
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+import path from "path";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
-// https://vite.dev/config/
+// Web build config — replaces the Electron-specific vite.config.ts for browser deployment
 export default defineConfig({
-  base: './',  // Use relative paths for assets (required for Electron custom protocol)
+  // Use relative base for serving from any path (Worker, backend, etc.)
+  base: './',
   plugins: [
     react(),
     tailwindcss(),
@@ -16,12 +17,26 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: 'dist-web',
+    rollupOptions: {
+      input: {
+        web: path.resolve(__dirname, 'web.html'),
+      },
+      output: {
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]',
+      },
+    },
   },
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
-    css: false,
+  server: {
+    port: 3000,
+    proxy: {
+      '/ws': {
+        target: 'ws://localhost:8790',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
-})
+});

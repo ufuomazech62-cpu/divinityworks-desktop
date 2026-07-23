@@ -173,9 +173,9 @@ googleAuth.get('/google/callback', async (c) => {
     return c.html(renderDesktopRedirect(deepLink, userInfo.email));
   }
 
-  // Otherwise, redirect to the dashboard (web browser flow)
-  // Store tokens in a cookie and redirect to /
-  return c.redirect(`/?access_token=${encodeURIComponent(access_token)}&refresh_token=${encodeURIComponent(refresh_token)}`, 302);
+  // Otherwise, redirect to the cloud app (web browser flow)
+  // Store tokens in the URL; the /app page picks them up and starts the agent container
+  return c.redirect(`/app?access_token=${encodeURIComponent(access_token)}&refresh_token=${encodeURIComponent(refresh_token)}`, 302);
 });
 
 // ---------- HTML renderers ----------
