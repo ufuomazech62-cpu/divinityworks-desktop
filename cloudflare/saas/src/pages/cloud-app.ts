@@ -45,12 +45,14 @@ export function cloudAppPage(): string {
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get('access_token');
     const urlRefresh = urlParams.get('refresh_token');
+    // Redirect to the real web app — pass token in URL (different origin, localStorage not shared)
+    var redirect = 'https://app.divinityworks.space/';
     if (urlToken) {
       localStorage.setItem('dw_access_token', urlToken);
       if (urlRefresh) localStorage.setItem('dw_refresh_token', urlRefresh);
+      redirect += '?token=' + encodeURIComponent(urlToken);
     }
-    // Redirect to the real web app
-    window.location.href = 'https://app.divinityworks.space/';
+    window.location.href = redirect;
   </script>
 </body>
 </html>`;

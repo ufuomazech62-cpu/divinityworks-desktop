@@ -22,8 +22,21 @@
     return proto + '//' + host + '/ws';
   })();
 
-  // Read the Worker JWT from localStorage (set by dash.divinityworks.space/app redirect)
-  var AUTH_TOKEN = localStorage.getItem('dw_access_token') || '';
+  // Read the auth token from URL param, localStorage, or hash
+  var AUTH_TOKEN = (function () {
+    // 1. Check URL query param (?token=...)
+    var urlParams = new URLSearchParams(window.location.search);
+    var urlToken = urlParams.get('token') || urlParams.get('access_token');
+    if (urlToken) {
+      localStorage.setItem('dw_access_token', urlToken);
+      // Clean the URL
+      var cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      return urlToken;
+    }
+    // 2. Check localStorage (same origin)
+    return localStorage.getItem('dw_access_token') || '';
+  })();
 
   // Pending invoke requests keyed by reqId
   var pending = {};
