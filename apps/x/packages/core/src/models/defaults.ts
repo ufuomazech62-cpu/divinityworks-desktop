@@ -45,6 +45,12 @@ export async function getDefaultModelAndProvider(): Promise<{ model: string; pro
     if (selection && (selection.provider !== "rowboat" || signedIn)) {
         return { model: selection.model, provider: selection.provider };
     }
+    // If a local models.json has a non-rowboat provider configured, use it
+    // instead of the gateway default. This lets self-hosted / web-bridge
+    // deployments route to their own configured provider (e.g. OpenRouter).
+    if (signedIn && cfg && cfg.provider && cfg.provider.flavor !== "rowboat") {
+        return { model: cfg.model, provider: cfg.provider.flavor };
+    }
     if (signedIn) {
         return { model: SIGNED_IN_DEFAULT_MODEL, provider: SIGNED_IN_DEFAULT_PROVIDER };
     }

@@ -1378,7 +1378,7 @@ function ChatInputInner({
               {providerDisplayNames[lockedModel.provider] || lockedModel.provider} — fixed for this chat
             </TooltipContent>
           </Tooltip>
-        ) : configuredModels.length > 0 ? (
+        ) : !window.isWeb && configuredModels.length > 0 ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
