@@ -1599,7 +1599,6 @@
 
 /* ── Hide desktop-only elements on mobile ─────────────────────── */
 @media (max-width: 768px) {
-  [data-tour-id] { display: none !important; }
   .desktop-only { display: none !important; }
 }
 
