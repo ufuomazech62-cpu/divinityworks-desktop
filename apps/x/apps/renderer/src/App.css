@@ -1478,6 +1478,24 @@
     flex-shrink: 0;
   }
 
+  /* Settings tab list: horizontally scrollable on mobile */
+  [role="dialog"] [role="tablist"] {
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: thin !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-shrink: 0 !important;
+    max-height: 52px !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  
+  [role="dialog"] [role="tablist"] button {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    padding: 0 12px !important;
+  }
+
   /* Settings dialog content area: scrollable */
   .flex.h-full.overflow-hidden > .flex-1 {
     flex: 1 !important;
