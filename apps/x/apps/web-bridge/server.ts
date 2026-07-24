@@ -5,7 +5,6 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { WorkDir } from '@x/core/dist/config/config.js';
 import { initConfigs } from '@x/core/dist/config/initConfigs.js';
 import container from '@x/core/dist/di/container.js';
-import { IOAuthRepo } from '@x/core/dist/auth/repo.js';
 import { asClass, asValue } from 'awilix';
 import { ipc as ipcShared } from '@x/shared';
 import { z } from 'zod';
@@ -127,27 +126,27 @@ import { isDurableTurnEvent } from '@x/shared/dist/turns.js';
 const webTokens = new Map<WebSocket, string>();
 let activeToken: string | null = null; // most recently seen token
 
-class WebOAuthRepo implements IOAuthRepo {
+// WebOAuthRepo — replaces FSOAuthRepo. Returns JWT from WebSocket
+// connection instead of reading oauth.json from disk.
+class WebOAuthRepo {
   async read(provider: string) {
-    if (provider === 'rowboat') {
-      if (activeToken) {
-        // Decode JWT to get expiry
-        let expiresAt = Math.floor(Date.now() / 1000) + 3600;
-        try {
-          const payload = JSON.parse(Buffer.from(activeToken.split('.')[1], 'base64url').toString('utf8'));
-          expiresAt = payload.exp ?? expiresAt;
-        } catch {}
-        return {
-          tokens: {
-            access_token: activeToken,
-            refresh_token: null,
-            expires_at: expiresAt,
-            token_type: 'Bearer' as const,
-            scopes: [],
-          },
-          mode: 'rowboat' as const,
-        };
-      }
+    if (provider === 'rowboat' && activeToken) {
+      // Decode JWT to get expiry
+      let expiresAt = Math.floor(Date.now() / 1000) + 3600;
+      try {
+        const payload = JSON.parse(Buffer.from(activeToken.split('.')[1], 'base64url').toString('utf8'));
+        expiresAt = payload.exp ?? expiresAt;
+      } catch {}
+      return {
+        tokens: {
+          access_token: activeToken,
+          refresh_token: null,
+          expires_at: expiresAt,
+          token_type: 'Bearer',
+          scopes: [],
+        },
+        mode: 'rowboat',
+      };
     }
     return {};
   }
@@ -165,7 +164,7 @@ class WebOAuthRepo implements IOAuthRepo {
 
 // Replace the FSOAuthRepo with our web version
 container.register({
-  oauthRepo: asClass(IOAuthRepo, WebOAuthRepo).singleton(),
+  oauthRepo: asClass(WebOAuthRepo).singleton(),
 });
 
 // Stub implementations for functions that live in main/ local files (not in @x/core).

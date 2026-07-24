@@ -3,7 +3,6 @@ import { resolve } from "path";
 import { homedir } from "os";
 import { initConfigs } from "@x/core/dist/config/initConfigs.js";
 import container from "@x/core/dist/di/container.js";
-import { IOAuthRepo } from "@x/core/dist/auth/repo.js";
 import { asClass } from "awilix";
 import { ipc as ipcShared } from "@x/shared";
 process.env.ROWBOAT_WORKDIR = resolve(homedir(), ".divinity");
@@ -97,25 +96,23 @@ const webTokens = /* @__PURE__ */ new Map();
 let activeToken = null;
 class WebOAuthRepo {
   async read(provider) {
-    if (provider === "rowboat") {
-      if (activeToken) {
-        let expiresAt = Math.floor(Date.now() / 1e3) + 3600;
-        try {
-          const payload = JSON.parse(Buffer.from(activeToken.split(".")[1], "base64url").toString("utf8"));
-          expiresAt = payload.exp ?? expiresAt;
-        } catch {
-        }
-        return {
-          tokens: {
-            access_token: activeToken,
-            refresh_token: null,
-            expires_at: expiresAt,
-            token_type: "Bearer",
-            scopes: []
-          },
-          mode: "rowboat"
-        };
+    if (provider === "rowboat" && activeToken) {
+      let expiresAt = Math.floor(Date.now() / 1e3) + 3600;
+      try {
+        const payload = JSON.parse(Buffer.from(activeToken.split(".")[1], "base64url").toString("utf8"));
+        expiresAt = payload.exp ?? expiresAt;
+      } catch {
       }
+      return {
+        tokens: {
+          access_token: activeToken,
+          refresh_token: null,
+          expires_at: expiresAt,
+          token_type: "Bearer",
+          scopes: []
+        },
+        mode: "rowboat"
+      };
     }
     return {};
   }
@@ -133,7 +130,7 @@ class WebOAuthRepo {
   }
 }
 container.register({
-  oauthRepo: asClass(IOAuthRepo, WebOAuthRepo).singleton()
+  oauthRepo: asClass(WebOAuthRepo).singleton()
 });
 async function connectProvider(_provider, _credentials) {
   return { error: "not_implemented" };
