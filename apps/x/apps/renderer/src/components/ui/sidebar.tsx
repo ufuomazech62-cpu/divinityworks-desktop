@@ -87,9 +87,35 @@ function SidebarProvider({
     const onChange = () => {
       if (mql.matches) setOpen(false)
     }
+    // Also collapse on initial mount if already mobile
+    if (mql.matches) setOpen(false)
     mql.addEventListener("change", onChange)
     return () => mql.removeEventListener("change", onChange)
   }, [setOpen])
+
+  // Mobile: close sidebar when clicking the backdrop (outside the sidebar)
+  React.useEffect(() => {
+    if (!open) return
+    const mql = window.matchMedia("(max-width: 768px)")
+    if (!mql.matches) return
+    const onBackdropClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // Close if click is on the backdrop (::before pseudo element on the sidebar wrapper)
+      // or outside the sidebar container
+      const sidebar = document.querySelector('[data-slot="sidebar-container"]')
+      if (sidebar && !sidebar.contains(target) && !target.closest('[data-sidebar="trigger"]')) {
+        setOpen(false)
+      }
+    }
+    // Use a slight delay so the sidebar open animation starts first
+    const timer = setTimeout(() => {
+      document.addEventListener("click", onBackdropClick)
+    }, 100)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener("click", onBackdropClick)
+    }
+  }, [open, setOpen])
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {

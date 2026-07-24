@@ -2305,22 +2305,22 @@ export function SettingsDialog({ children, defaultTab = "account", open: control
     <Dialog open={open} onOpenChange={setOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent
-        className="max-w-[900px]! w-[900px] h-[600px] p-0 gap-0 overflow-hidden"
+        className="max-w-[900px]! w-[900px] h-[600px] p-0 gap-0 overflow-hidden max-md:w-screen! max-md:max-w-screen! max-md:h-dvh! max-md:max-h-dvh! max-md:rounded-none! max-md:border-0!"
       >
-        <div className="flex h-full overflow-hidden">
+        <div className="flex h-full overflow-hidden max-md:flex-col!">
           {/* Sidebar */}
-          <div className="w-48 border-r bg-muted/30 p-2 flex flex-col">
-            <div className="px-2 pt-3.5 pb-3 mb-2">
+          <div className="w-48 border-r bg-muted/30 p-2 flex flex-col max-md:w-full! max-md:border-r-0 max-md:border-b max-md:flex-row max-md:overflow-x-auto max-md:gap-1 max-md:p-1">
+            <div className="px-2 pt-3.5 pb-3 mb-2 max-md:hidden">
               <h2 className="font-semibold text-base tracking-tight">Settings</h2>
             </div>
-            <nav className="flex flex-col">
+            <nav className="flex flex-col max-md:flex-row max-md:gap-0.5 max-md:whitespace-nowrap">
               {NAV_SECTIONS.map((section) => {
                 const sectionTabs = visibleTabs.filter((tab) => section.ids.includes(tab.id))
                 if (sectionTabs.length === 0) return null
                 return (
-                  <div key={section.label ?? "main"} className="flex flex-col gap-0.5">
+                  <div key={section.label ?? "main"} className="flex flex-col gap-0.5 max-md:flex-row">
                     {section.label ? (
-                      <div className="px-2 pb-1 pt-4 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                      <div className="px-2 pb-1 pt-4 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70 max-md:hidden">
                         {section.label}
                       </div>
                     ) : null}

@@ -410,7 +410,9 @@ const SIGN_IN_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>Sign in — Divinity Works</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -471,6 +473,17 @@ const SIGN_IN_HTML = `<!DOCTYPE html>
     }
     .google-btn:hover { border-color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .footer { border-top: 1px solid var(--border); padding: 24px; text-align: center; font-size: 13px; color: var(--muted-soft); }
+    @media (max-width: 768px) {
+      .nav__inner { padding: 12px 16px; }
+      .nav__links { display: none; }
+      .main { padding: 32px 16px; padding-top: 20vh; }
+      .logo { width: 56px; height: 56px; margin-bottom: 20px; }
+      .logo img { border-radius: 12px; }
+      .card h1 { font-size: 22px; }
+      .card p { font-size: 14px; margin-bottom: 28px; }
+      .google-btn { padding: 14px 28px; font-size: 16px; width: 100%; justify-content: center; }
+      .footer { padding: 16px; font-size: 12px; }
+    }
   </style>
 </head>
 <body>

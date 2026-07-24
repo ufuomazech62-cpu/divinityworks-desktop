@@ -744,19 +744,39 @@ function FixedSidebarToggle({
 }: {
   leftInsetPx: number
 }) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, open } = useSidebar()
   return (
-    <div className="fixed left-0 top-0 z-50 flex h-10 items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-      <div aria-hidden="true" className="h-10 shrink-0" style={{ width: leftInsetPx }} />
+    <div className="fixed left-0 top-0 z-50 flex h-10 items-center gap-1 max-md:h-12" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div aria-hidden="true" className="h-10 shrink-0 max-md:hidden" style={{ width: leftInsetPx }} />
       {/* Sidebar toggle */}
       <button
         type="button"
         onClick={toggleSidebar}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-        style={{ marginLeft: TITLEBAR_TOGGLE_MARGIN_LEFT_PX }}
+        className={cn(
+          "flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
+          "h-8 w-8 max-md:h-10 max-md:w-10 max-md:ml-2",
+          !open && "max-md:bg-accent"
+        )}
+        style={{ marginLeft: undefined }}
         aria-label="Toggle Sidebar"
       >
-        <PanelLeftIcon className="size-5" />
+        {/* Hamburger icon on mobile, panel icon on desktop */}
+        <PanelLeftIcon className="size-5 max-md:hidden" />
+        <svg className="hidden max-md:block" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          {open ? (
+            <>
+              <line x1="4" y1="6" x2="16" y2="6" />
+              <line x1="8" y1="10" x2="16" y2="10" />
+              <line x1="4" y1="14" x2="16" y2="14" />
+            </>
+          ) : (
+            <>
+              <line x1="3" y1="5" x2="17" y2="5" />
+              <line x1="3" y1="10" x2="17" y2="10" />
+              <line x1="3" y1="15" x2="17" y2="15" />
+            </>
+          )}
+        </svg>
       </button>
     </div>
   )
