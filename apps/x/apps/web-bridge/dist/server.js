@@ -775,8 +775,8 @@ wss.on("connection", (ws, req) => {
     activeToken = authToken;
     const userId = getUserIdFromToken(authToken);
     registerUserClient(userId, ws);
+    console.log("New client connected", authToken ? `(authenticated, user: ${userId})` : "(anonymous)");
   }
-  console.log("New client connected", authToken ? "(authenticated)" : "(anonymous)");
   clients.add(ws);
   ws.on("message", (data) => {
     try {
