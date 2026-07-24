@@ -802,13 +802,17 @@ async function handleInvoke(ws, message) {
         result = { success: true };
         break;
       // Models channels
-      case "models:list":
-        if (await isSignedIn()) {
+      case "models:list": {
+        const cfg = await getDefaultModelAndProvider();
+        if (cfg.provider !== "rowboat") {
+          result = [{ provider: cfg.provider, model: cfg.model, name: cfg.model }];
+        } else if (await isSignedIn()) {
           result = await listGatewayModels();
         } else {
           result = await listOnboardingModels();
         }
         break;
+      }
       case "models:test":
         result = await testModelConnection(validatedArgs.provider, validatedArgs.model);
         break;
@@ -1043,9 +1047,14 @@ async function handleInvoke(ws, message) {
         result = { runIds };
         break;
       // Billing channel
-      case "billing:getInfo":
-        result = await getBillingInfo();
+      case "billing:getInfo": {
+        try {
+          result = await getBillingInfo();
+        } catch {
+          result = { plan: "free", usage: 0, limit: -1, unlimited: true };
+        }
         break;
+      }
       // Notifications channels
       case "notifications:getSettings":
         result = loadNotificationSettings();

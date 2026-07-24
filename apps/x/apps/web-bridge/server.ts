@@ -967,13 +967,19 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       // Models channels
-      case 'models:list':
-        if (await isSignedIn()) {
+      case 'models:list': {
+        const cfg = await getDefaultModelAndProvider();
+        // If we have a local models.json with a non-rowboat provider,
+        // return just that model instead of hitting the Rowboat gateway.
+        if (cfg.provider !== 'rowboat') {
+          result = [{ provider: cfg.provider, model: cfg.model, name: cfg.model }];
+        } else if (await isSignedIn()) {
           result = await listGatewayModels();
         } else {
           result = await listOnboardingModels();
         }
         break;
+      }
         
       case 'models:test':
         result = await testModelConnection(validatedArgs.provider, validatedArgs.model);
@@ -1252,9 +1258,16 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       // Billing channel
-      case 'billing:getInfo':
-        result = await getBillingInfo();
+      case 'billing:getInfo': {
+        // In web-bridge mode with a local provider, there's no billing gateway.
+        // Return a free/unlimited plan so the UI doesn't error.
+        try {
+          result = await getBillingInfo();
+        } catch {
+          result = { plan: 'free', usage: 0, limit: -1, unlimited: true };
+        }
         break;
+      }
         
       // Notifications channels
       case 'notifications:getSettings':
