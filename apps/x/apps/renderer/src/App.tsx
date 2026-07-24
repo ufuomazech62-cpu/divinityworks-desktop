@@ -6384,12 +6384,38 @@ function App() {
                     onTakeMeetingNotes={() => { void handleToggleMeeting() }}
                     onOpenChat={handleNewChatTab}
                     onPrefillChat={prefillChat}
-                    onChatSubmit={(text) => {
-                      // Navigate from Home to Chat with the message pre-filled and ready to send
-                      setIsHomeOpen(false)
-                      handleNewChatTab()
-                      setPresetMessage(text)
-                    }}
+                    chatInput={
+                      <ChatInputWithMentions
+                        knowledgeFiles={knowledgeFiles}
+                        recentFiles={recentWikiFiles}
+                        visibleFiles={visibleKnowledgeFiles}
+                        onSubmit={handlePromptSubmit}
+                        onStop={handleStop}
+                        isProcessing={false}
+                        isStopping={false}
+                        isActive={true}
+                        presetMessage={presetMessage}
+                        onPresetMessageConsumed={() => setPresetMessage(undefined)}
+                        runId={null}
+                        codeSessionLock={null}
+                        initialDraft={chatDraftsRef.current.get(activeChatTabIdRef.current)}
+                        onDraftChange={(text) => setChatDraftForTab(activeChatTabIdRef.current, text)}
+                        onSelectedModelChange={(m) => {
+                          if (m) selectedModelByTabRef.current.set(activeChatTabIdRef.current, m)
+                          else selectedModelByTabRef.current.delete(activeChatTabIdRef.current)
+                        }}
+                        onReasoningEffortChange={(effort) => {
+                          if (effort) reasoningEffortByTabRef.current.set(activeChatTabIdRef.current, effort)
+                          else reasoningEffortByTabRef.current.delete(activeChatTabIdRef.current)
+                        }}
+                        workDir={workDirByTab[activeChatTabIdRef.current] ?? null}
+                        onWorkDirChange={(v) => setTabWorkDir(activeChatTabIdRef.current, v)}
+                        isRecording={false}
+                        recordingText={undefined}
+                        recordingState={undefined}
+                        audioLevelsRef={voice.audioLevelsRef}
+                      />
+                    }
                   />
                 </div>
               ) : isSuggestedTopicsOpen ? (

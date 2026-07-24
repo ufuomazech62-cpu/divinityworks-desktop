@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Bot, Calendar, ExternalLink, Mail, Mic, Presentation, Video } from 'lucide-react'
 import { extractConferenceLink } from '@/lib/calendar-event'
 import { ToolConnectionsCard } from '@/components/tool-connections-card'
@@ -29,6 +29,7 @@ type HomeViewProps = {
   onOpenChat?: () => void
   onPrefillChat?: (text: string) => void
   onChatSubmit?: (text: string) => void
+  chatInput?: ReactNode
 }
 
 type CalEvent = {
@@ -194,6 +195,7 @@ export function HomeView({
   onTakeMeetingNotes,
   onPrefillChat,
   onChatSubmit,
+  chatInput,
 }: HomeViewProps) {
   const [events, setEvents] = useState<CalEvent[]>([])
   const [emails, setEmails] = useState<EmailThread[]>([])
@@ -201,7 +203,6 @@ export function HomeView({
   const [slackMessages, setSlackMessages] = useState<SlackFeedMessage[]>([])
   const [slackError, setSlackError] = useState<string | null>(null)
   const [slackErrorKind, setSlackErrorKind] = useState<string | null>(null)
-  const [mobileChatInput, setMobileChatInput] = useState('')
 
   const loadEvents = useCallback(async () => {
     try {
@@ -297,6 +298,13 @@ export function HomeView({
             <h1 className="text-[28px] font-semibold tracking-tight max-md:text-[22px]">{greeting()}</h1>
             <span className="text-sm text-muted-foreground">{todayLabel()}</span>
           </div>
+
+          {/* Real chat input — front and center on home */}
+          {chatInput && (
+            <div className="max-md:py-1">
+              {chatInput}
+            </div>
+          )}
 
           {/* Up-next hero */}
           {nextEvent && (
@@ -499,44 +507,6 @@ export function HomeView({
           </button>
 
         </div>
-      </div>
-
-      {/* Mobile chat input — fixed at bottom, always accessible */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-background px-4 py-3" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            const text = mobileChatInput.trim()
-            if (!text) return
-            setMobileChatInput('')
-            if (onChatSubmit) {
-              onChatSubmit(text)
-            } else {
-              onPrefillChat?.(text)
-            }
-          }}
-          className="flex items-center gap-2"
-        >
-          <input
-            type="text"
-            value={mobileChatInput}
-            onChange={(e) => setMobileChatInput(e.target.value)}
-            placeholder="Ask Divinity anything…"
-            className="flex-1 rounded-full border border-border bg-muted/50 px-4 py-2.5 text-[14px] outline-none placeholder:text-muted-foreground focus:border-primary"
-            enterKeyHint="send"
-          />
-          <button
-            type="submit"
-            disabled={!mobileChatInput.trim()}
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40 transition-opacity"
-            aria-label="Send message"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 2L11 13" />
-              <path d="M22 2l-7 20-4-9-9-4 20-7z" />
-            </svg>
-          </button>
-        </form>
       </div>
     </div>
   )
