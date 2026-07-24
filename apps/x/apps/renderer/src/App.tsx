@@ -2934,6 +2934,23 @@ function App() {
     const hasAttachments = stagedAttachments.length > 0
     if (!userMessage && !hasAttachments) return
 
+    // If submitting from the Home view, switch to the chat conversation view
+    // so the user sees their message and the agent's response.
+    if (isHomeOpen) {
+      setIsHomeOpen(false)
+      setIsGraphOpen(false)
+      setIsSuggestedTopicsOpen(false)
+      setIsMeetingsOpen(false)
+      setIsLiveNotesOpen(false)
+      setIsBgTasksOpen(false)
+      setIsEmailOpen(false)
+      setIsWorkspaceOpen(false)
+      setIsKnowledgeViewOpen(false)
+      setIsChatHistoryOpen(false)
+      setIsAppsOpen(false)
+      setSelectedPath(null)
+    }
+
     setMessage('')
 
     // Video chat mode: drain the webcam frames buffered since the last send

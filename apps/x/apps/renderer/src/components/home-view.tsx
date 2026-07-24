@@ -306,6 +306,22 @@ export function HomeView({
             </div>
           )}
 
+          {/* Create slides — quick action right under chat input */}
+          <button
+            type="button"
+            onClick={() => onPrefillChat?.('Create a pdf presentation on ')}
+            className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-accent max-md:mb-2"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Presentation className="size-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-medium">Create slides</span>
+              <span className="block truncate text-[12.5px] text-muted-foreground">Turn any topic into a polished presentation.</span>
+            </span>
+            <span className="shrink-0 text-[12.5px] font-medium text-primary transition-transform group-hover:translate-x-0.5">Create →</span>
+          </button>
+
           {/* Up-next hero */}
           {nextEvent && (
             <div className="flex items-center gap-[18px] rounded-xl bg-foreground px-5 py-[18px] text-background">
@@ -489,22 +505,6 @@ export function HomeView({
 
           {/* Tool connections */}
           <ToolConnectionsCard />
-
-          {/* Create slides — moved to bottom for mobile-first flow */}
-          <button
-            type="button"
-            onClick={() => onPrefillChat?.('Create a pdf presentation on ')}
-            className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-accent max-md:mb-2"
-          >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Presentation className="size-[18px]" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-medium">Create slides</span>
-              <span className="block truncate text-[12.5px] text-muted-foreground">Turn any topic into a polished presentation.</span>
-            </span>
-            <span className="shrink-0 text-[12.5px] font-medium text-primary transition-transform group-hover:translate-x-0.5">Create →</span>
-          </button>
 
         </div>
       </div>
