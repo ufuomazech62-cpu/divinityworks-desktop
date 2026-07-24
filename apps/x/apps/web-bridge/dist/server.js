@@ -1058,8 +1058,8 @@ async function handleInvoke(ws, message) {
             subscriptionStatus: "active",
             trialExpiresAt: null,
             catalog: { plans: [] },
-            monthly: { sanctionedCredits: -1, usedCredits: 0, availableCredits: -1 },
-            daily: { sanctionedCredits: -1, usedCredits: 0, availableCredits: -1, usageDay: "" }
+            monthly: { sanctionedCredits: 999999, usedCredits: 0, availableCredits: 999999 },
+            daily: { sanctionedCredits: 999999, usedCredits: 0, availableCredits: 999999, usageDay: "" }
           };
         }
         break;
