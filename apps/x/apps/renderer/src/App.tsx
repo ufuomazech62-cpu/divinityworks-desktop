@@ -6384,6 +6384,12 @@ function App() {
                     onTakeMeetingNotes={() => { void handleToggleMeeting() }}
                     onOpenChat={handleNewChatTab}
                     onPrefillChat={prefillChat}
+                    onChatSubmit={(text) => {
+                      // Navigate from Home to Chat with the message pre-filled and ready to send
+                      setIsHomeOpen(false)
+                      handleNewChatTab()
+                      setPresetMessage(text)
+                    }}
                   />
                 </div>
               ) : isSuggestedTopicsOpen ? (
