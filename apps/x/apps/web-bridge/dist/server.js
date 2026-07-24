@@ -1057,7 +1057,7 @@ async function handleInvoke(ws, message) {
             subscriptionPlanId: "free",
             subscriptionStatus: "active",
             trialExpiresAt: null,
-            catalog: null,
+            catalog: { plans: [] },
             monthly: { sanctionedCredits: -1, usedCredits: 0, availableCredits: -1 },
             daily: { sanctionedCredits: -1, usedCredits: 0, availableCredits: -1, usageDay: "" }
           };
