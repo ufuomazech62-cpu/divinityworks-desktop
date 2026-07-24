@@ -1408,12 +1408,16 @@
   }
 
   /* When sidebar is expanded on mobile, it's a drawer overlay */
+  [data-slot="sidebar"][data-state="expanded"] {
+    height: 100dvh !important;
+  }
   [data-slot="sidebar"][data-state="expanded"] [data-slot="sidebar-container"] {
     position: fixed !important;
     inset: 0 !important;
     z-index: 50 !important;
     width: 85vw !important;
     max-width: 320px !important;
+    height: 100dvh !important;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3) !important;
   }
 
