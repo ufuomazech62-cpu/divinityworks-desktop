@@ -475,9 +475,36 @@ const httpServer = createServer(async (req, res) => {
   }
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   const urlToken = url.searchParams.get("token") || url.searchParams.get("access_token");
+  const urlRefresh = url.searchParams.get("refresh_token");
   const cookieToken = (req.headers["cookie"] || "").match(/dw_access_token=([^;]+)/)?.[1];
+  const cookieRefresh = (req.headers["cookie"] || "").match(/dw_refresh_token=([^;]+)/)?.[1];
   const bearerToken = (req.headers["authorization"] || "").match(/^Bearer\s+(.+)$/i)?.[1];
-  const token = urlToken || cookieToken || bearerToken || null;
+  let token = urlToken || cookieToken || bearerToken || null;
+  let refreshToken = urlRefresh || cookieRefresh || null;
+  if (token && !isTokenValid(token) && refreshToken) {
+    try {
+      const refreshRes = await fetch("https://dash.divinityworks.space/auth/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+      if (refreshRes.ok) {
+        const tokens = await refreshRes.json();
+        if (tokens.access_token) {
+          token = tokens.access_token;
+          if (tokens.refresh_token) refreshToken = tokens.refresh_token;
+          const cookies = [
+            `dw_access_token=${tokens.access_token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
+            `dw_refresh_token=${refreshToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+          ];
+          res.setHeader("Set-Cookie", cookies);
+          console.log("Token refreshed successfully");
+        }
+      }
+    } catch (refreshErr) {
+      console.error("Token refresh failed:", refreshErr);
+    }
+  }
   if (!token || !isTokenValid(token)) {
     const reqPath = (req.url || "/").split("?")[0];
     const ext = extname(reqPath).toLowerCase();
@@ -491,7 +518,13 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
   if (urlToken) {
-    res.setHeader("Set-Cookie", `dw_access_token=${urlToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+    const cookies = [
+      `dw_access_token=${urlToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
+    ];
+    if (urlRefresh) {
+      cookies.push(`dw_refresh_token=${urlRefresh}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`);
+    }
+    res.setHeader("Set-Cookie", cookies);
   }
   let urlPath = req.url?.split("?")[0] || "/";
   if (urlPath === "/") urlPath = "/web.html";
@@ -522,10 +555,17 @@ const httpServer = createServer(async (req, res) => {
   }
 });
 const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
-httpServer.listen(8790, () => {
+httpServer.listen(8790, async () => {
   console.log("Divinity web bridge listening on http://localhost:8790");
   console.log("  Static files: " + RENDERER_DIST);
   console.log("  WebSocket: ws://localhost:8790/ws");
+  try {
+    const sessions = container.resolve("sessions");
+    await sessions.initialize();
+    console.log(`  Sessions loaded: ${sessions.listSessions().length}`);
+  } catch (err) {
+    console.error("  Failed to load sessions:", err);
+  }
 });
 const clients = /* @__PURE__ */ new Set();
 const subscriptions = /* @__PURE__ */ new Map();

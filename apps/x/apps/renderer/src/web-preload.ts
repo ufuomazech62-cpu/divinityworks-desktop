@@ -24,11 +24,13 @@
 
   // Read the auth token from URL param, localStorage, or hash
   var AUTH_TOKEN = (function () {
-    // 1. Check URL query param (?token=...)
+    // 1. Check URL query param (?token=...&refresh_token=...)
     var urlParams = new URLSearchParams(window.location.search);
     var urlToken = urlParams.get('token') || urlParams.get('access_token');
+    var urlRefresh = urlParams.get('refresh_token');
     if (urlToken) {
       localStorage.setItem('dw_access_token', urlToken);
+      if (urlRefresh) localStorage.setItem('dw_refresh_token', urlRefresh);
       // Clean the URL
       var cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
@@ -37,6 +39,62 @@
     // 2. Check localStorage (same origin)
     return localStorage.getItem('dw_access_token') || '';
   })();
+
+  // ── Token refresh: proactively refresh the access token before it
+  // expires. The SaaS Worker issues 15-min access tokens + 30-day
+  // refresh tokens. We call /auth/refresh every 14 min to get a fresh
+  // access token. This prevents the WS from going stale and the page
+  // from redirecting to signin on refresh. ──────────────────────
+  function refreshTokenNow() {
+    var rt = localStorage.getItem('dw_refresh_token');
+    if (!rt) return Promise.resolve(null);
+    return fetch('https://dash.divinityworks.space/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt }),
+    }).then(function (res) {
+      if (!res.ok) throw new Error('refresh failed');
+      return res.json();
+    }).then(function (tokens) {
+      if (tokens.access_token) {
+        AUTH_TOKEN = tokens.access_token;
+        localStorage.setItem('dw_access_token', tokens.access_token);
+        if (tokens.refresh_token) {
+          localStorage.setItem('dw_refresh_token', tokens.refresh_token);
+        }
+        console.log('[web-preload] Token refreshed');
+        // Reconnect WebSocket with the fresh token so the server
+        // sees the new auth token on the subprotocol.
+        if (ws) {
+          try { ws.close(); } catch (e) {}
+          // onclose will trigger reconnect via setTimeout
+        }
+        return tokens.access_token;
+      }
+      return null;
+    }).catch(function (e) {
+      console.error('[web-preload] Token refresh failed:', e);
+      return null;
+    });
+  }
+
+  // Refresh every 14 minutes (access token TTL is 15 min)
+  setInterval(refreshTokenNow, 14 * 60 * 1000);
+  // Also refresh on tab focus (covers case where tab was inactive)
+  window.addEventListener('focus', function () {
+    var token = localStorage.getItem('dw_access_token');
+    if (token) {
+      try {
+        var parts = token.split('.');
+        if (parts.length === 3) {
+          var payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          if (payload.exp && Date.now() >= (payload.exp - 60) * 1000) {
+            refreshTokenNow();
+          }
+        }
+      } catch (e) {}
+    }
+  });
 
   // Pending invoke requests keyed by reqId
   var pending = {};

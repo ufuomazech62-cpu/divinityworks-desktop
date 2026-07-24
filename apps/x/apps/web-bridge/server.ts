@@ -545,9 +545,41 @@ const httpServer = createServer(async (req, res) => {
   // URL cleaned). Subsequent requests use cookie.
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const urlToken = url.searchParams.get('token') || url.searchParams.get('access_token');
+  const urlRefresh = url.searchParams.get('refresh_token');
   const cookieToken = (req.headers['cookie'] || '').match(/dw_access_token=([^;]+)/)?.[1];
+  const cookieRefresh = (req.headers['cookie'] || '').match(/dw_refresh_token=([^;]+)/)?.[1];
   const bearerToken = (req.headers['authorization'] || '').match(/^Bearer\s+(.+)$/i)?.[1];
-  const token = urlToken || cookieToken || bearerToken || null;
+  let token = urlToken || cookieToken || bearerToken || null;
+  let refreshToken = urlRefresh || cookieRefresh || null;
+
+  // ── Token refresh: if access token is expired but we have a refresh
+  // token, silently get a new access token from the SaaS Worker. ──
+  if (token && !isTokenValid(token) && refreshToken) {
+    try {
+      const refreshRes = await fetch('https://dash.divinityworks.space/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (refreshRes.ok) {
+        const tokens = await refreshRes.json() as { access_token?: string; refresh_token?: string };
+        if (tokens.access_token) {
+          token = tokens.access_token;
+          // Update refresh token if rotated
+          if (tokens.refresh_token) refreshToken = tokens.refresh_token;
+          // Set updated cookies
+          const cookies = [
+            `dw_access_token=${tokens.access_token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
+            `dw_refresh_token=${refreshToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+          ];
+          res.setHeader('Set-Cookie', cookies);
+          console.log('Token refreshed successfully');
+        }
+      }
+    } catch (refreshErr) {
+      console.error('Token refresh failed:', refreshErr);
+    }
+  }
 
   if (!token || !isTokenValid(token)) {
     const reqPath = (req.url || '/').split('?')[0];
@@ -567,10 +599,16 @@ const httpServer = createServer(async (req, res) => {
   }
 
   // ── AUTHENTICATED — serve files ─────────────────────────────────
-  // If token came from URL, set a cookie so subsequent asset requests
+  // If token came from URL, set cookies so subsequent asset requests
   // (JS, CSS, fonts) are automatically authenticated.
   if (urlToken) {
-    res.setHeader('Set-Cookie', `dw_access_token=${urlToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+    const cookies = [
+      `dw_access_token=${urlToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
+    ];
+    if (urlRefresh) {
+      cookies.push(`dw_refresh_token=${urlRefresh}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`);
+    }
+    res.setHeader('Set-Cookie', cookies);
   }
 
   let urlPath = req.url?.split('?')[0] || '/';
@@ -610,10 +648,24 @@ const httpServer = createServer(async (req, res) => {
 
 const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
-httpServer.listen(8790, () => {
+// ── Load existing sessions from disk on startup ───────────────────
+// The SessionIndex is an in-memory Map that starts empty. Without
+// calling initialize(), sessions:list returns [] even though session
+// files exist on disk — making it look like data was "wiped" after a
+// server restart or browser refresh.
+httpServer.listen(8790, async () => {
   console.log('Divinity web bridge listening on http://localhost:8790');
   console.log('  Static files: ' + RENDERER_DIST);
   console.log('  WebSocket: ws://localhost:8790/ws');
+
+  // Rebuild the in-memory session index from disk files
+  try {
+    const sessions = container.resolve<ISessions>('sessions');
+    await sessions.initialize();
+    console.log(`  Sessions loaded: ${sessions.listSessions().length}`);
+  } catch (err) {
+    console.error('  Failed to load sessions:', err);
+  }
 });
 
 // Store connected clients and subscriptions
