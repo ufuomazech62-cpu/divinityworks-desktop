@@ -1260,17 +1260,36 @@ async function handleInvoke(ws: WebSocket, message: any) {
       // Billing channel
       case 'billing:getInfo': {
         // In web-bridge mode with a local provider, there's no billing gateway.
-        // Return a free/unlimited plan so the UI doesn't error.
+        // Return a free/unlimited plan so the UI doesn't error or show "Unknown".
         try {
           result = await getBillingInfo();
         } catch {
+          // Extract user email from JWT for display
+          let userEmail: string | null = null;
+          const token = clientAuthTokens.get(ws) || activeToken;
+          if (token) {
+            try {
+              const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+              userEmail = payload.email ?? payload.sub ?? null;
+            } catch {}
+          }
           result = {
-            userEmail: null,
+            userEmail,
             userId: null,
             subscriptionPlanId: 'free',
             subscriptionStatus: 'active',
             trialExpiresAt: null,
-            catalog: { plans: [] },
+            catalog: {
+              plans: [{
+                id: 'free',
+                category: 'free' as const,
+                displayName: 'Free',
+                monthlyCredits: 999999,
+                dailyCredits: 999999,
+                monthlyPriceCents: null,
+                archived: false,
+              }],
+            },
             monthly: { sanctionedCredits: 999999, usedCredits: 0, availableCredits: 999999 },
             daily: { sanctionedCredits: 999999, usedCredits: 0, availableCredits: 999999, usageDay: '' },
           };

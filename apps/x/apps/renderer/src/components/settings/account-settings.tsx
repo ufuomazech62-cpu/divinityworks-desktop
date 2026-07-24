@@ -180,7 +180,7 @@ export function AccountSettings({ dialogOpen }: AccountSettingsProps) {
             <p className="text-sm font-medium">
               {billing?.userEmail ?? 'Loading...'}
             </p>
-            <p className="text-xs text-muted-foreground">Divinity Account</p>
+            <p className="text-xs text-muted-foreground">Free Plan · Unlimited</p>
           </div>
         </div>
       </div>

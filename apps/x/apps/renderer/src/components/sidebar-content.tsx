@@ -1136,8 +1136,8 @@ export function SidebarContentPanel({
           </AlertDialogContent>
         </AlertDialog>
       </SidebarContent>
-      {/* Billing / upgrade CTA or Log in CTA */}
-      {isRowboatConnected && billing ? (() => {
+      {/* Billing / upgrade CTA or Log in CTA — hidden in web mode (self-hosted, no billing gateway) */}
+      {!window.isWeb && isRowboatConnected && billing ? (() => {
         const upgradeLabel = !billing.subscriptionPlanId || currentBillingPlan?.category === 'free' || currentBillingPlan?.category === 'starter' ? 'Upgrade' : 'Manage'
         if (outOfCredits) {
           return (
