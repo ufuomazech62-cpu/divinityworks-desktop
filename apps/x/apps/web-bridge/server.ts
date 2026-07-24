@@ -298,6 +298,54 @@ const MIME_TYPES: Record<string, string> = {
   '.map': 'application/json; charset=utf-8',
 };
 
+// ── Server-side auth gate ──────────────────────────────────────────
+// Minimal JWT verify — decode payload, check expiry. Signature is verified
+// by the dashboard Worker (Google OAuth JWT), so we trust the token's
+// presence + expiry. The bridge is not the auth issuer.
+function isTokenValid(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return false;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    if (payload.exp && Date.now() >= payload.exp * 1000) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// HTML served to unauthenticated visitors — clean redirect to sign-in
+const SIGN_IN_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Divinity Works — Sign In</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+         background:#0a0a0a;color:#e5e5e5;display:flex;align-items:center;
+         justify-content:center;min-height:100vh;text-align:center}
+    .container{max-width:400px;padding:2rem}
+    .logo{font-size:1.75rem;font-weight:700;letter-spacing:-0.03em;
+          background:linear-gradient(135deg,#d4af37,#f4e08a);-webkit-background-clip:text;
+          background-clip:text;color:transparent;margin-bottom:0.5rem}
+    .tagline{color:#888;font-size:0.95rem;margin-bottom:2rem}
+    .btn{display:inline-block;padding:0.75rem 2rem;background:#fff;color:#000;
+         border-radius:0.5rem;text-decoration:none;font-weight:600;
+         transition:opacity 0.2s}
+    .btn:hover{opacity:0.85}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">DIVINITY WORKS</div>
+    <div class="tagline">Your AI coworker with a real memory.</div>
+    <a class="btn" href="https://dash.divinityworks.space/signin">Sign in with Google</a>
+  </div>
+</body>
+</html>`;
+
 const httpServer = createServer(async (req, res) => {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -310,14 +358,49 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
-  // Health check
+  // Health check — always accessible (used by Cloudflare Tunnel)
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
     return;
   }
 
-  // Serve static files from renderer dist-web
+  // ── AUTH GATE ───────────────────────────────────────────────────
+  // Every request must pass auth. No token = redirect to sign-in page.
+  // Token in URL is consumed by web-preload.ts (saved to localStorage,
+  // URL cleaned). Subsequent requests use cookie.
+  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  const urlToken = url.searchParams.get('token') || url.searchParams.get('access_token');
+  const cookieToken = (req.headers['cookie'] || '').match(/dw_access_token=([^;]+)/)?.[1];
+  const bearerToken = (req.headers['authorization'] || '').match(/^Bearer\s+(.+)$/i)?.[1];
+  const token = urlToken || cookieToken || bearerToken || null;
+
+  if (!token || !isTokenValid(token)) {
+    // Check if this is a static asset request (JS, CSS, fonts, images)
+    // These are only served to authenticated users. Without auth, deny.
+    const reqPath = (req.url || '/').split('?')[0];
+    const ext = extname(reqPath).toLowerCase();
+
+    // If it's the HTML page request, serve the sign-in redirect page
+    if (reqPath === '/' || ext === '.html' || ext === '') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(SIGN_IN_HTML);
+      return;
+    }
+
+    // For assets (JS/CSS/fonts) without auth — 401
+    res.writeHead(401, { 'Content-Type': 'text/plain' });
+    res.end('Unauthorized — please sign in at dash.divinityworks.space/signin');
+    return;
+  }
+
+  // ── AUTHENTICATED — serve files ─────────────────────────────────
+  // If token came from URL, set a cookie so subsequent asset requests
+  // (JS, CSS, fonts) are automatically authenticated.
+  if (urlToken) {
+    res.setHeader('Set-Cookie', `dw_access_token=${urlToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+  }
+
   let urlPath = req.url?.split('?')[0] || '/';
   if (urlPath === '/') urlPath = '/web.html';
 
@@ -329,9 +412,10 @@ const httpServer = createServer(async (req, res) => {
       const ext = extname(filePath).toLowerCase();
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
       const data = await readFile(filePath);
+      // No caching — always serve fresh files
       res.writeHead(200, {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
       });
       res.end(data);
       return;
