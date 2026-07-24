@@ -102,12 +102,18 @@ export function AccountSettings({ dialogOpen }: AccountSettingsProps) {
 
   const handleConnect = useCallback(async () => {
     try {
-      setConnecting(true)
+      setConnecting(true);
       const result = await window.ipc.invoke('oauth:connect', { provider: 'rowboat' })
+      if (result.redirect) {
+        // Web mode: bridge says "go to dashboard to sign in"
+        window.open(result.redirect, '_self')
+        return
+      }
       if (!result.success) {
         toast.error(result.error || 'Failed to log in to Divinity')
         setConnecting(false)
       }
+      // Success: the oauth:didConnect event will fire and update state
     } catch {
       toast.error('Failed to log in to Divinity')
       setConnecting(false)
@@ -118,6 +124,11 @@ export function AccountSettings({ dialogOpen }: AccountSettingsProps) {
     try {
       setDisconnecting(true)
       const result = await window.ipc.invoke('oauth:disconnect', { provider: 'rowboat' })
+      if (result.redirect) {
+        // Web mode: bridge says "go to dashboard to sign out"
+        window.open(result.redirect, '_self')
+        return
+      }
       if (result.success) {
         setIsRowboatConnected(false)
         toast.success('Logged out of Divinity')

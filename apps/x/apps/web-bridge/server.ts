@@ -5,6 +5,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { WorkDir } from '@x/core/dist/config/config.js';
 import { initConfigs } from '@x/core/dist/config/initConfigs.js';
 import container from '@x/core/dist/di/container.js';
+import { IOAuthRepo } from '@x/core/dist/auth/repo.js';
+import { asClass, asValue } from 'awilix';
 import { ipc as ipcShared } from '@x/shared';
 import { z } from 'zod';
 
@@ -109,8 +111,66 @@ import type { CodeRunFeed } from '@x/core/dist/code-mode/feed.js';
 import type { CodeSession } from '@x/shared/dist/code-sessions.js';
 import { isDurableTurnEvent } from '@x/shared/dist/turns.js';
 
+// ── Web-mode auth override ─────────────────────────────────────────
+// In web mode, auth comes from the SaaS JWT passed via WebSocket subprotocol.
+// The Electron-era oauth.json file is irrelevant. We override the DI
+// container's oauthRepo so that all @x/core functions (getAccessToken,
+// isSignedIn, getBillingInfo, listGatewayModels, etc.) use the JWT instead
+// of reading from disk.
+//
+// Since the bridge is single-process and each WebSocket message includes
+// the ws instance, we use a per-message token lookup. For functions called
+// outside a message handler (e.g. getRowboatConfig cache), we fall back to
+// the most recently active token.
+
+// Map of WebSocket → JWT (same as clientAuthTokens, but accessible to overrides)
+const webTokens = new Map<WebSocket, string>();
+let activeToken: string | null = null; // most recently seen token
+
+class WebOAuthRepo implements IOAuthRepo {
+  async read(provider: string) {
+    if (provider === 'rowboat') {
+      if (activeToken) {
+        // Decode JWT to get expiry
+        let expiresAt = Math.floor(Date.now() / 1000) + 3600;
+        try {
+          const payload = JSON.parse(Buffer.from(activeToken.split('.')[1], 'base64url').toString('utf8'));
+          expiresAt = payload.exp ?? expiresAt;
+        } catch {}
+        return {
+          tokens: {
+            access_token: activeToken,
+            refresh_token: null,
+            expires_at: expiresAt,
+            token_type: 'Bearer' as const,
+            scopes: [],
+          },
+          mode: 'rowboat' as const,
+        };
+      }
+    }
+    return {};
+  }
+  async upsert() { /* no-op — web mode doesn't persist to disk */ }
+  async delete() { /* no-op */ }
+  async getClientFacingConfig() {
+    if (activeToken) {
+      return {
+        rowboat: { connected: true, error: null, clientId: null },
+      };
+    }
+    return {};
+  }
+}
+
+// Replace the FSOAuthRepo with our web version
+container.register({
+  oauthRepo: asClass(IOAuthRepo, WebOAuthRepo).singleton(),
+});
+
 // Stub implementations for functions that live in main/ local files (not in @x/core).
 // These are Electron-dependent; the web-bridge stubs them out.
+// Note: 'rowboat' provider is handled separately above (JWT-based).
 async function connectProvider(_provider: string, _credentials?: { clientId: string; clientSecret: string }) {
   return { error: 'not_implemented' };
 }
@@ -593,14 +653,21 @@ wss.on('connection', (ws: WebSocket, req: any) => {
   }
   if (authToken) {
     clientAuthTokens.set(ws, authToken);
+    webTokens.set(ws, authToken);
+    activeToken = authToken; // set as active for non-request-scoped calls
   }
-  
+
   console.log('New client connected', authToken ? '(authenticated)' : '(anonymous)');
   clients.add(ws);
   
   ws.on('message', (data) => {
     try {
       const message = JSON.parse(data.toString());
+      
+      // Set active token for this request's scope so @x/core functions
+      // (getAccessToken, isSignedIn, getBillingInfo, etc.) can use it
+      const wsToken = webTokens.get(ws);
+      if (wsToken) activeToken = wsToken;
       
       if (message.type === 'invoke') {
         handleInvoke(ws, message);
@@ -633,6 +700,7 @@ wss.on('connection', (ws: WebSocket, req: any) => {
     console.log('Client disconnected');
     clients.delete(ws);
     clientAuthTokens.delete(ws);
+    webTokens.delete(ws);
     
     // Clean up subscriptions
     for (const [channel, subscribers] of subscriptions) {
@@ -1219,9 +1287,23 @@ async function handleInvoke(ws: WebSocket, message: any) {
         
       // OAuth channels
       case 'oauth:connect': {
-        // In web mode, if user has no local Electron auth, redirect to dashboard
+        // In web mode, the user is already authenticated via the SaaS JWT.
+        // If they have a WebSocket token, they're already "connected" —
+        // return success and emit the connected event so the renderer
+        // updates its state.
         const workerToken = clientAuthTokens.get(ws) || '';
-        if (!workerToken && validatedArgs.provider === 'rowboat') {
+        if (validatedArgs.provider === 'rowboat') {
+          if (workerToken) {
+            // Already connected via JWT — fire the event so UI updates
+            ws.send(JSON.stringify({
+              type: 'event',
+              channel: 'oauth:didConnect',
+              event: { provider: 'rowboat', success: true },
+            }));
+            result = { success: true };
+            break;
+          }
+          // No JWT at all — redirect to dashboard sign-in
           result = { redirect: 'https://dash.divinityworks.space/signin' };
           break;
         }
@@ -1231,10 +1313,18 @@ async function handleInvoke(ws: WebSocket, message: any) {
         result = await connectProvider(validatedArgs.provider, credentials);
         break;
       }
-        
-      case 'oauth:disconnect':
+
+      case 'oauth:disconnect': {
+        // In web mode, "disconnect" = sign out from the SaaS dashboard.
+        // We can't revoke the JWT from here (the dashboard owns it), so
+        // we redirect the user to the dashboard logout page.
+        if (validatedArgs.provider === 'rowboat') {
+          result = { redirect: 'https://dash.divinityworks.space/auth/logout' };
+          break;
+        }
         result = await disconnectProvider(validatedArgs.provider);
         break;
+      }
         
       case 'oauth:list-providers':
         result = listProviders();
