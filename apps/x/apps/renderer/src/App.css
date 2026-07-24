@@ -1075,6 +1075,28 @@
   background: var(--background);
 }
 
+/* Mobile: sidebar becomes an overlay with backdrop */
+@media (max-width: 767px) {
+  [data-slot="sidebar"][data-state="expanded"] {
+    position: fixed !important;
+    inset-y: 0 !important;
+    left: 0 !important;
+    z-index: 50 !important;
+    box-shadow: 0 0 40px rgba(0,0,0,0.3);
+  }
+  [data-slot="sidebar"][data-state="collapsed"] [data-slot="sidebar-container"] {
+    transform: translateX(-100%);
+  }
+  [data-slot="sidebar"][data-state="expanded"]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: -1;
+    pointer-events: none;
+  }
+}
+
 .rowboat-sidebar [data-sidebar="sidebar"] {
   background: var(--sidebar);
   border-right: 1px solid var(--sidebar-border);

@@ -6998,7 +6998,7 @@ function App() {
               <ChatSidebar
                 placement={chatPanePlacement}
                 paneSize={chatPaneSize}
-                className={isChatPaneInMiddle ? "order-2" : undefined}
+                className={cn("max-md:hidden", isChatPaneInMiddle ? "order-2" : undefined)}
                 defaultWidth={DEFAULT_CHAT_PANE_WIDTH}
                 isOpen={isChatSidebarOpen}
                 isMaximized={isRightPaneMaximized}

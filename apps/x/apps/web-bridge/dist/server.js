@@ -482,12 +482,12 @@ const httpServer = createServer(async (req, res) => {
     const reqPath = (req.url || "/").split("?")[0];
     const ext = extname(reqPath).toLowerCase();
     if (reqPath === "/" || ext === ".html" || ext === "") {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(SIGN_IN_HTML);
+      res.writeHead(302, { "Location": "https://dash.divinityworks.space/signin" });
+      res.end();
       return;
     }
     res.writeHead(401, { "Content-Type": "text/plain" });
-    res.end("Unauthorized \u2014 please sign in at dash.divinityworks.space/signin");
+    res.end("Unauthorized");
     return;
   }
   if (urlToken) {

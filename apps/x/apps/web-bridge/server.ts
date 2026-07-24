@@ -550,21 +550,19 @@ const httpServer = createServer(async (req, res) => {
   const token = urlToken || cookieToken || bearerToken || null;
 
   if (!token || !isTokenValid(token)) {
-    // Check if this is a static asset request (JS, CSS, fonts, images)
-    // These are only served to authenticated users. Without auth, deny.
     const reqPath = (req.url || '/').split('?')[0];
     const ext = extname(reqPath).toLowerCase();
 
-    // If it's the HTML page request, serve the sign-in redirect page
+    // HTML page request → redirect to the ONE sign-in page
     if (reqPath === '/' || ext === '.html' || ext === '') {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(SIGN_IN_HTML);
+      res.writeHead(302, { 'Location': 'https://dash.divinityworks.space/signin' });
+      res.end();
       return;
     }
 
     // For assets (JS/CSS/fonts) without auth — 401
     res.writeHead(401, { 'Content-Type': 'text/plain' });
-    res.end('Unauthorized — please sign in at dash.divinityworks.space/signin');
+    res.end('Unauthorized');
     return;
   }
 
