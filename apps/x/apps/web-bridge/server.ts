@@ -110,8 +110,198 @@ import type { ITurnEventBus as TurnEventBusType } from '@x/core/dist/runtime/tur
 import type { CodeRunFeed } from '@x/core/dist/code-mode/feed.js';
 import type { CodeSession } from '@x/shared/dist/code-sessions.js';
 import { isDurableTurnEvent } from '@x/shared/dist/turns.js';
+// Per-user session infrastructure
+import { SessionsImpl } from '@x/core/dist/runtime/sessions/sessions.js';
+import { FSSessionRepo } from '@x/core/dist/runtime/sessions/fs-repo.js';
+import { FSTurnRepo } from '@x/core/dist/runtime/turns/fs-repo.js';
+import { TurnRuntime } from '@x/core/dist/runtime/turns/runtime.js';
+import { createContextResolver } from '@x/core/dist/runtime/turns/context-elision.js';
+import { EmitterSessionBus } from '@x/core/dist/runtime/sessions/bus.js';
+import { TurnEventHub } from '@x/core/dist/runtime/turns/event-hub.js';
+import { SessionIndex } from '@x/core/dist/runtime/sessions/session-index.js';
+import path from 'path';
+import fs from 'fs';
 
-// ── Web-mode auth override ─────────────────────────────────────────
+// ── Per-user session manager ──────────────────────────────────────
+// Each user gets their own FSSessionRepo + FSTurnRepo pointing to
+// ~/.divinity/users/<userId>/storage/{sessions,turns}. This ensures
+// User A can never see User B's chats, memory, or runs.
+const userSessionsCache = new Map<string, ISessions>();
+const userTurnRepos = new Map<string, FSTurnRepo>();
+const userSessionBuses = new Map<string, EmitterSessionBus>();
+const userTurnEventHubs = new Map<string, TurnEventHub>();
+
+// Shared services from the DI container (stateless, safe to share)
+const sharedClock = container.resolve('clock');
+const sharedIdGenerator = container.resolve('idGenerator');
+const sharedAgentResolver = container.resolve('agentResolver');
+const sharedModelRegistry = container.resolve('modelRegistry');
+const sharedToolRegistry = container.resolve('toolRegistry');
+const sharedPermissionChecker = container.resolve('permissionChecker');
+const sharedPermissionClassifier = container.resolve('permissionClassifier');
+const sharedUsageReporter = container.resolve('usageReporter');
+
+function decodeJwt(token: string): { sub?: string; email?: string; exp?: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+  } catch { return null; }
+}
+
+function getUserIdFromToken(token: string): string {
+  const payload = decodeJwt(token);
+  if (payload?.sub) return payload.sub;
+  // Fallback: use email or token hash
+  if (payload?.email) return 'email-' + payload.email.replace(/[^a-zA-Z0-9]/g, '_');
+  return 'unknown-user';
+}
+
+async function getUserSessions(ws: WebSocket): Promise<ISessions> {
+  const token = webTokens.get(ws) || activeToken || '';
+  if (!token) throw new Error('No auth token');
+
+  const userId = getUserIdFromToken(token);
+  if (userSessionsCache.has(userId)) return userSessionsCache.get(userId)!;
+
+  // Create per-user directories
+  const userDir = path.join(WorkDir, 'users', userId);
+  const sessionsDir = path.join(userDir, 'storage', 'sessions');
+  const turnsDir = path.join(userDir, 'storage', 'turns');
+  fs.mkdirSync(sessionsDir, { recursive: true });
+  fs.mkdirSync(turnsDir, { recursive: true });
+
+  // Per-user repos
+  const sessionRepo = new FSSessionRepo({ sessionsRootDir: sessionsDir });
+  const turnRepo = new FSTurnRepo({ turnsRootDir: turnsDir });
+  userTurnRepos.set(userId, turnRepo);
+
+  // Per-user event buses (so events only fan out to the right user)
+  const sessionBus = new EmitterSessionBus();
+  const turnEventBus = new TurnEventHub();
+  userSessionBuses.set(userId, sessionBus);
+  userTurnEventHubs.set(userId, turnEventBus);
+
+  // Per-user turn runtime with per-user turnRepo
+  const contextResolver = createContextResolver({ turnRepo });
+  const turnRuntime = new TurnRuntime({
+    turnRepo,
+    idGenerator: sharedIdGenerator,
+    clock: sharedClock,
+    agentResolver: sharedAgentResolver,
+    modelRegistry: sharedModelRegistry,
+    toolRegistry: sharedToolRegistry,
+    contextResolver,
+    permissionChecker: sharedPermissionChecker,
+    permissionClassifier: sharedPermissionClassifier,
+    lifecycleBus: container.resolve('lifecycleBus'),
+    turnEventBus,
+    usageReporter: sharedUsageReporter,
+  });
+
+  // Per-user sessions service
+  const sessions = new SessionsImpl({
+    sessionRepo,
+    turnRuntime,
+    idGenerator: sharedIdGenerator,
+    clock: sharedClock,
+    sessionBus,
+  });
+
+  // Load existing sessions from disk
+  await sessions.initialize();
+  console.log(`[user:${userId}] Sessions loaded: ${sessions.listSessions().length}`);
+
+  // Subscribe to per-user event buses — forward events only to this user's WS connections
+  sessionBus.subscribe((event) => {
+    broadcastToUserClients(userId, 'sessions:events', event);
+  });
+  turnEventBus.subscribeAll((event) => {
+    if (isDurableTurnEvent(event.event)) {
+      broadcastToUserClients(userId, 'turns:events', event);
+    }
+  });
+
+  userSessionsCache.set(userId, sessions);
+  return sessions;
+}
+
+// Map of userId → Set<WebSocket> for per-user event broadcasting
+const userClients = new Map<string, Set<WebSocket>>();
+
+// Map of WebSocket → userId (for cleanup on disconnect)
+const wsToUserId = new Map<WebSocket, string>();
+
+function registerUserClient(userId: string, ws: WebSocket): void {
+  if (!userClients.has(userId)) userClients.set(userId, new Set());
+  userClients.get(userId)!.add(ws);
+  wsToUserId.set(ws, userId);
+}
+
+function unregisterUserClient(ws: WebSocket): void {
+  const userId = wsToUserId.get(ws);
+  if (userId) {
+    userClients.get(userId)?.delete(ws);
+    wsToUserId.delete(ws);
+  }
+}
+
+function broadcastToUserClients(userId: string, channel: string, payload: unknown): void {
+  const clients = userClients.get(userId);
+  if (!clients || clients.size === 0) return;
+
+  const message = JSON.stringify({
+    type: 'event',
+    channel,
+    data: payload,
+  });
+
+  for (const client of clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      try { client.send(message); } catch (e) { console.error(`Error broadcasting to user client: ${e}`); }
+    }
+  }
+}
+
+// ── Per-user runs repo proxy ──────────────────────────────────────
+// The legacy runs system (runsCore.createRun, runs:fetch, etc.) resolves
+// `runsRepo` from the DI container. We register a proxy that delegates to
+// per-user FSRunsRepo instances based on the active token, so each user's
+// legacy runs are stored in ~/.divinity/users/<userId>/storage/runs/.
+import { FSRunsRepo } from '@x/core/dist/runtime/legacy/repo.js';
+
+const userRunsRepos = new Map<string, FSRunsRepo>(); // userId → FSRunsRepo
+
+function getUserRunsRepo(): FSRunsRepo {
+  const token = activeToken || '';
+  if (!token) {
+    // Fallback: use the default global runs dir
+    return container.resolve('runsRepo') as FSRunsRepo;
+  }
+  const userId = getUserIdFromToken(token);
+  if (userRunsRepos.has(userId)) return userRunsRepos.get(userId)!;
+  const userDir = path.join(WorkDir, 'users', userId);
+  const runsDir = path.join(userDir, 'storage', 'runs');
+  fs.mkdirSync(runsDir, { recursive: true });
+  const repo = new FSRunsRepo({ idGenerator: sharedIdGenerator, runsDir });
+  userRunsRepos.set(userId, repo);
+  return repo;
+}
+
+// Proxy that delegates to per-user FSRunsRepo based on activeToken
+const runsRepoProxy: Partial<FSRunsRepo> = {
+  create: (opts: any) => getUserRunsRepo().create(opts),
+  fetch: (id: string) => getUserRunsRepo().fetch(id),
+  list: (cursor?: string) => getUserRunsRepo().list(cursor),
+  listByWorkDir: (dir: string) => getUserRunsRepo().listByWorkDir(dir),
+  appendEvents: (runId: string, events: any[]) => getUserRunsRepo().appendEvents(runId, events),
+  delete: (id: string) => getUserRunsRepo().delete(id),
+};
+
+// Override the container's runsRepo with our per-user proxy
+container.register({
+  runsRepo: asValue(runsRepoProxy),
+});
 // In web mode, auth comes from the SaaS JWT passed via WebSocket subprotocol.
 // The Electron-era oauth.json file is irrelevant. We override the DI
 // container's oauthRepo so that all @x/core functions (getAccessToken,
@@ -659,13 +849,9 @@ httpServer.listen(8790, async () => {
   console.log('  WebSocket: ws://localhost:8790/ws');
 
   // Rebuild the in-memory session index from disk files
-  try {
-    const sessions = container.resolve<ISessions>('sessions');
-    await sessions.initialize();
-    console.log(`  Sessions loaded: ${sessions.listSessions().length}`);
-  } catch (err) {
-    console.error('  Failed to load sessions:', err);
-  }
+  // Per-user sessions are now initialized lazily on first WS connection
+  // via getUserSessions(ws). No global initialization needed here.
+  console.log('  Per-user sessions will be loaded lazily on first connection.');
 });
 
 // Store connected clients and subscriptions
@@ -749,6 +935,9 @@ wss.on('connection', (ws: WebSocket, req: any) => {
     clientAuthTokens.set(ws, authToken);
     webTokens.set(ws, authToken);
     activeToken = authToken; // set as active for non-request-scoped calls
+    // Register this WS connection with its user ID for per-user event broadcasting
+    const userId = getUserIdFromToken(authToken);
+    registerUserClient(userId, ws);
   }
 
   console.log('New client connected', authToken ? '(authenticated)' : '(anonymous)');
@@ -795,6 +984,7 @@ wss.on('connection', (ws: WebSocket, req: any) => {
     clients.delete(ws);
     clientAuthTokens.delete(ws);
     webTokens.delete(ws);
+    unregisterUserClient(ws); // remove from per-user event broadcast list
     
     // Clean up subscriptions
     for (const [channel, subscribers] of subscriptions) {
@@ -884,78 +1074,98 @@ async function handleInvoke(ws: WebSocket, message: any) {
         result = await workspace.remove(validatedArgs.path, validatedArgs.opts);
         break;
         
-      // Sessions channels
-      case 'sessions:create':
-        const sessions = container.resolve<ISessions>('sessions');
-        const sessionId = await sessions.createSession(validatedArgs);
+      // Sessions channels — per-user scoped via getUserSessions(ws)
+      case 'sessions:create': {
+        const userSess = await getUserSessions(ws);
+        const sessionId = await userSess.createSession(validatedArgs);
         result = { sessionId };
         break;
-        
-      case 'sessions:list':
-        const sessionsList = container.resolve<ISessions>('sessions').listSessions();
-        result = { sessions: sessionsList };
+      }
+
+      case 'sessions:list': {
+        const userSess = await getUserSessions(ws);
+        result = { sessions: userSess.listSessions() };
         break;
-        
-      case 'sessions:get':
-        result = await container.resolve<ISessions>('sessions').getSession(validatedArgs.sessionId);
+      }
+
+      case 'sessions:get': {
+        const userSess = await getUserSessions(ws);
+        result = await userSess.getSession(validatedArgs.sessionId);
         break;
-        
-      case 'sessions:getTurn':
-        result = await container.resolve<ISessions>('sessions').getTurn(validatedArgs.turnId);
+      }
+
+      case 'sessions:getTurn': {
+        const userSess = await getUserSessions(ws);
+        result = await userSess.getTurn(validatedArgs.turnId);
         break;
-        
-      case 'sessions:sendMessage':
-        result = await container.resolve<ISessions>('sessions').sendMessage(
-          validatedArgs.sessionId, 
-          validatedArgs.input, 
+      }
+
+      case 'sessions:sendMessage': {
+        const userSess = await getUserSessions(ws);
+        result = await userSess.sendMessage(
+          validatedArgs.sessionId,
+          validatedArgs.input,
           validatedArgs.config
         );
         break;
-        
-      case 'sessions:respondToPermission':
-        await container.resolve<ISessions>('sessions').respondToPermission(
-          validatedArgs.turnId, 
-          validatedArgs.toolCallId, 
-          validatedArgs.decision, 
+      }
+
+      case 'sessions:respondToPermission': {
+        const userSess = await getUserSessions(ws);
+        await userSess.respondToPermission(
+          validatedArgs.turnId,
+          validatedArgs.toolCallId,
+          validatedArgs.decision,
           validatedArgs.metadata
         );
         result = { success: true };
         break;
-        
-      case 'sessions:respondToAskHuman':
-        await container.resolve<ISessions>('sessions').respondToAskHuman(
-          validatedArgs.turnId, 
-          validatedArgs.toolCallId, 
+      }
+
+      case 'sessions:respondToAskHuman': {
+        const userSess = await getUserSessions(ws);
+        await userSess.respondToAskHuman(
+          validatedArgs.turnId,
+          validatedArgs.toolCallId,
           validatedArgs.answer
         );
         result = { success: true };
         break;
-        
-      case 'sessions:stopTurn':
-        await container.resolve<ISessions>('sessions').stopTurn(
-          validatedArgs.turnId, 
+      }
+
+      case 'sessions:stopTurn': {
+        const userSess = await getUserSessions(ws);
+        await userSess.stopTurn(
+          validatedArgs.turnId,
           validatedArgs.reason
         );
         result = { success: true };
         break;
-        
-      case 'sessions:resumeTurn':
-        await container.resolve<ISessions>('sessions').resumeTurn(validatedArgs.sessionId);
+      }
+
+      case 'sessions:resumeTurn': {
+        const userSess = await getUserSessions(ws);
+        await userSess.resumeTurn(validatedArgs.sessionId);
         result = { success: true };
         break;
-        
-      case 'sessions:setTitle':
-        await container.resolve<ISessions>('sessions').setTitle(
-          validatedArgs.sessionId, 
+      }
+
+      case 'sessions:setTitle': {
+        const userSess = await getUserSessions(ws);
+        await userSess.setTitle(
+          validatedArgs.sessionId,
           validatedArgs.title
         );
         result = { success: true };
         break;
+      }
         
-      case 'sessions:delete':
-        await container.resolve<ISessions>('sessions').deleteSession(validatedArgs.sessionId);
+      case 'sessions:delete': {
+        const userSess = await getUserSessions(ws);
+        await userSess.deleteSession(validatedArgs.sessionId);
         result = { success: true };
         break;
+      }
         
       // Runs channels
       case 'runs:create':
@@ -2129,20 +2339,11 @@ function setupEventBroadcasting() {
     broadcastToSubscribers('services:events', event);
   });
   
-  // Broadcast sessions events
-  const sessionBus = container.resolve<SessionBusType>('sessionBus');
-  sessionBus.subscribe((event) => {
-    broadcastToSubscribers('sessions:events', event);
-  });
-  
-  // Broadcast turns events
-  const turnEventBus = container.resolve<TurnEventBusType>('turnEventBus');
-  turnEventBus.subscribeAll((event) => {
-    if (isDurableTurnEvent(event.event)) {
-      broadcastToSubscribers('turns:events', event);
-      return;
-    }
-  });
+  // NOTE: Session and turn events are now per-user — see getUserSessions()
+  // which subscribes to per-user sessionBus and turnEventBus instances
+  // and forwards events only to that user's WS connections via
+  // broadcastToUserClients(). This ensures User A never receives User B's
+  // session/turn events.
   
   // Broadcast code run events
   const codeRunFeed = container.resolve<CodeRunFeed>('codeRunFeed');
