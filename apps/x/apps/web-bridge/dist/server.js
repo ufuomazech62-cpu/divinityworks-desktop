@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { resolve } from "path";
 import { homedir } from "os";
+import { createHmac, timingSafeEqual } from "crypto";
 import { initConfigs } from "@x/core/dist/config/initConfigs.js";
 import container from "@x/core/dist/di/container.js";
 import { asClass } from "awilix";
@@ -306,15 +307,43 @@ const MIME_TYPES = {
   ".wasm": "application/wasm",
   ".map": "application/json; charset=utf-8"
 };
+const JWT_SECRET = process.env.JWT_SECRET || "";
 function isTokenValid(token) {
+  if (!JWT_SECRET) {
+    try {
+      const parts = token.split(".");
+      if (parts.length < 2) return false;
+      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+      if (payload.exp && Date.now() >= payload.exp * 1e3) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
   try {
     const parts = token.split(".");
-    if (parts.length < 2) return false;
-    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+    if (parts.length !== 3) return false;
+    const [headerB64, payloadB64, sigB64] = parts;
+    const signingInput = `${headerB64}.${payloadB64}`;
+    const sig = Buffer.from(sigB64, "base64url");
+    const expectedSig = createHmac("sha256", JWT_SECRET).update(signingInput).digest();
+    if (sig.length !== expectedSig.length) return false;
+    if (!timingSafeEqual(sig, expectedSig)) return false;
+    const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString());
     if (payload.exp && Date.now() >= payload.exp * 1e3) return false;
+    if (payload.type && payload.type !== "access") return false;
     return true;
   } catch {
     return false;
+  }
+}
+function decodeJwtPayload(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    return JSON.parse(Buffer.from(parts[1], "base64url").toString());
+  } catch {
+    return null;
   }
 }
 const SIGN_IN_HTML = `<!DOCTYPE html>

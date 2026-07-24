@@ -2,6 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { resolve } from 'path';
 import { homedir } from 'os';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { WorkDir } from '@x/core/dist/config/config.js';
 import { initConfigs } from '@x/core/dist/config/initConfigs.js';
 import container from '@x/core/dist/di/container.js';
@@ -358,18 +359,49 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 // ── Server-side auth gate ──────────────────────────────────────────
-// Minimal JWT verify — decode payload, check expiry. Signature is verified
-// by the dashboard Worker (Google OAuth JWT), so we trust the token's
-// presence + expiry. The bridge is not the auth issuer.
+// Full HS256 JWT signature verification using Node's crypto module.
+// The JWT_SECRET is shared with the Cloudflare Worker that issues tokens.
+const JWT_SECRET = process.env.JWT_SECRET || '';
+
 function isTokenValid(token: string): boolean {
+  if (!JWT_SECRET) {
+    // Fallback: if no secret configured, only check expiry (dev mode)
+    try {
+      const parts = token.split('.');
+      if (parts.length < 2) return false;
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+      if (payload.exp && Date.now() >= payload.exp * 1000) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
   try {
     const parts = token.split('.');
-    if (parts.length < 2) return false;
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    if (parts.length !== 3) return false;
+    const [headerB64, payloadB64, sigB64] = parts;
+    const signingInput = `${headerB64}.${payloadB64}`;
+    const sig = Buffer.from(sigB64, 'base64url');
+    const expectedSig = createHmac('sha256', JWT_SECRET).update(signingInput).digest();
+    if (sig.length !== expectedSig.length) return false;
+    if (!timingSafeEqual(sig, expectedSig)) return false;
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
     if (payload.exp && Date.now() >= payload.exp * 1000) return false;
+    if (payload.type && payload.type !== 'access') return false;
     return true;
   } catch {
     return false;
+  }
+}
+
+// Decode JWT payload (without verification — used for extracting user info)
+function decodeJwtPayload(token: string): { sub?: string; email?: string; exp?: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    return JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+  } catch {
+    return null;
   }
 }
 
