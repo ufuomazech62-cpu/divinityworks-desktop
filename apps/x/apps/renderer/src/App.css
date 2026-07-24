@@ -1463,6 +1463,8 @@
     border-radius: 0 !important;
     padding: 0 !important;
     inset: 0 !important;
+    --tw-translate-x: 0 !important;
+    --tw-translate-y: 0 !important;
     translate: none !important;
     transform: none !important;
   }
