@@ -206,9 +206,10 @@ export function CatalogTab({ onInstalled }: { onInstalled: (folder: string) => v
     setError(null)
     try {
       const r = await window.ipc.invoke('apps:catalogIndex', { force })
-      setRecords(r.records)
-      setStale(r.stale)
-      void loadStars(r.records)
+      const recs = r?.records ?? []
+      setRecords(recs)
+      setStale(r?.stale ?? false)
+      void loadStars(recs)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -221,13 +222,14 @@ export function CatalogTab({ onInstalled }: { onInstalled: (folder: string) => v
       const r = q.trim()
         ? await window.ipc.invoke('apps:catalogSearch', { query: q })
         : await window.ipc.invoke('apps:catalogIndex', {})
-      setRecords(r.records)
-      void loadStars(r.records)
+      const recs = r?.records ?? []
+      setRecords(recs)
+      void loadStars(recs)
     } catch { /* keep current list */ }
   }
 
   // Rank by stars (unknown counts sink), name as the stable tiebreak.
-  const ranked = [...records].sort((a, b) =>
+  const ranked = [...(records ?? [])].sort((a, b) =>
     ((stars[b.repo] ?? -1) - (stars[a.repo] ?? -1)) || a.name.localeCompare(b.name))
 
   const startInstall = async (name: string) => {

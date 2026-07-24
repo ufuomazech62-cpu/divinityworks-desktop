@@ -845,15 +845,15 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'sessions:get':
-        result = container.resolve<ISessions>('sessions').getSession(validatedArgs.sessionId);
+        result = await container.resolve<ISessions>('sessions').getSession(validatedArgs.sessionId);
         break;
         
       case 'sessions:getTurn':
-        result = container.resolve<ISessions>('sessions').getTurn(validatedArgs.turnId);
+        result = await container.resolve<ISessions>('sessions').getTurn(validatedArgs.turnId);
         break;
         
       case 'sessions:sendMessage':
-        result = container.resolve<ISessions>('sessions').sendMessage(
+        result = await container.resolve<ISessions>('sessions').sendMessage(
           validatedArgs.sessionId, 
           validatedArgs.input, 
           validatedArgs.config
@@ -1309,11 +1309,11 @@ async function handleInvoke(ws: WebSocket, message: any) {
         
       // Voice channels
       case 'voice:getConfig':
-        result = voice.getVoiceConfig();
+        result = await voice.getVoiceConfig();
         break;
         
       case 'voice:synthesize':
-        result = voice.synthesizeSpeech(validatedArgs.text);
+        result = await voice.synthesizeSpeech(validatedArgs.text);
         break;
         
       // Meeting channels
@@ -1339,7 +1339,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         
       // Google Docs channels
       case 'google-docs:getStatus':
-        result = getGoogleDocsConnectionStatus();
+        result = await getGoogleDocsConnectionStatus();
         break;
         
       case 'google-docs:import':
@@ -1827,7 +1827,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'apps:catalogIndex':
-        result = registryClient.refreshIndex(validatedArgs.force);
+        result = await registryClient.refreshIndex(validatedArgs.force);
         break;
         
       case 'apps:catalogSearch':
@@ -1881,7 +1881,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         
       case 'apps:installFromUrl':
         if (!validatedArgs.confirmed) {
-          result = appsInstaller.previewUrlInstall(validatedArgs.url);
+          result = await appsInstaller.previewUrlInstall(validatedArgs.url);
         } else {
           const installResult = await appsInstaller.confirmUrlInstall(validatedArgs.url);
           result = installResult;
@@ -1894,7 +1894,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'apps:checkUpdate':
-        result = appsInstaller.checkUpdate(validatedArgs.folder);
+        result = await appsInstaller.checkUpdate(validatedArgs.folder);
         break;
         
       case 'apps:update':
@@ -1911,15 +1911,15 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'apps:publish':
-        result = appsPublisher.publishApp(validatedArgs.folder, () => {});
+        result = await appsPublisher.publishApp(validatedArgs.folder, () => {});
         break;
         
       case 'apps:publishUpdate':
-        result = appsPublisher.publishUpdate(validatedArgs.folder, validatedArgs.increment);
+        result = await appsPublisher.publishUpdate(validatedArgs.folder, validatedArgs.increment);
         break;
         
       case 'apps:registerExisting':
-        result = appsPublisher.registerExisting(validatedArgs.name, validatedArgs.repo);
+        result = await appsPublisher.registerExisting(validatedArgs.name, validatedArgs.repo);
         break;
         
       // GitHub auth channels
