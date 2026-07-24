@@ -1051,7 +1051,16 @@ async function handleInvoke(ws, message) {
         try {
           result = await getBillingInfo();
         } catch {
-          result = { plan: "free", usage: 0, limit: -1, unlimited: true };
+          result = {
+            userEmail: null,
+            userId: null,
+            subscriptionPlanId: "free",
+            subscriptionStatus: "active",
+            trialExpiresAt: null,
+            catalog: null,
+            monthly: { sanctionedCredits: -1, usedCredits: 0, availableCredits: -1 },
+            daily: { sanctionedCredits: -1, usedCredits: 0, availableCredits: -1, usageDay: "" }
+          };
         }
         break;
       }
