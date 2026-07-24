@@ -1220,8 +1220,8 @@ export function SidebarContentPanel({
           </div>
         )
       })() : null}
-      {/* Sign in CTA */}
-      {!isRowboatConnected && (
+      {/* Sign in CTA — hidden in web mode (users auth via Google OAuth on dashboard) */}
+      {!isRowboatConnected && !window.isWeb && (
         <div className="px-3 py-2">
           <button
             onClick={handleRowboatLogin}

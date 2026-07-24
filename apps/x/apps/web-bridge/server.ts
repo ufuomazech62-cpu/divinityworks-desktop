@@ -1095,25 +1095,15 @@ async function handleInvoke(ws: WebSocket, message: any) {
         
       // Account channels
       case 'account:getRowboat': {
-        // Check if user has a Worker JWT (from dash.divinityworks.space Google OAuth)
+        // WEB-ONLY: Authentication is via Worker JWT only.
+        // No token in WebSocket subprotocol = not signed in = show SignInGate.
+        // The Electron local-account fallback is removed for the web app.
         const workerToken = clientAuthTokens.get(ws) || '';
         if (workerToken) {
-          // User authenticated via Google OAuth on the dashboard — skip Electron auth
           const config = await getRowboatConfig();
           result = { signedIn: true, accessToken: workerToken, config };
-          break;
-        }
-        const signedIn = await isSignedIn();
-        if (!signedIn) {
-          result = { signedIn: false, accessToken: null, config: null };
         } else {
-          const config = await getRowboatConfig();
-          try {
-            const accessToken = await getAccessToken();
-            result = { signedIn: true, accessToken, config };
-          } catch {
-            result = { signedIn: true, accessToken: null, config };
-          }
+          result = { signedIn: false, accessToken: null, config: null };
         }
         break;
       }

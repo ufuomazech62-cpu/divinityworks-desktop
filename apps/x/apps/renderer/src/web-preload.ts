@@ -198,4 +198,6 @@
   // ── Inject into window ────────────────────────────────────────────
   window.ipc = ipc;
   window.electronUtils = electronUtils;
+  // Flag so renderer code can detect web mode and hide Electron-only UI
+  window.isWeb = true;
 })();
