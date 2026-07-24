@@ -1480,7 +1480,7 @@
 
   /* Settings tab list: horizontally scrollable on mobile */
   [role="dialog"] [role="tablist"],
-  [role="dialog"] .flex.flex-col.gap-0\\.5.max-md\\:flex-row {
+  [role="dialog"] .max-md\:flex-row {
     flex-direction: row !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
@@ -1493,7 +1493,7 @@
   }
   
   [role="dialog"] [role="tablist"] button,
-  [role="dialog"] .flex.flex-col.gap-0\\.5.max-md\\:flex-row button {
+  [role="dialog"] .max-md\:flex-row button {
     flex-shrink: 0 !important;
     white-space: nowrap !important;
     padding: 0 12px !important;
