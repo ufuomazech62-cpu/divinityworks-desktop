@@ -18,6 +18,7 @@ initConfigs();
 
 // Import all the core functions — real direct-path imports matching apps/main/src/ipc.ts
 import { workspace, versionHistory, voice } from '@x/core';
+import { userWorkDirStorage } from '@x/core/dist/config/config.js';
 import * as runsCore from '@x/core/dist/runtime/legacy/runs.js';
 import { bus } from '@x/core/dist/runtime/legacy/bus.js';
 import { serviceBus } from '@x/core/dist/services/service_bus.js';
@@ -54,6 +55,7 @@ import { summarizeMeeting } from '@x/core/dist/knowledge/summarize_meeting.js';
 import { getAccessToken } from '@x/core/dist/auth/tokens.js';
 import { getRowboatConfig } from '@x/core/dist/config/rowboat.js';
 import { runLiveNoteAgent } from '@x/core/dist/knowledge/live-note/runner.js';
+import { composioAccountsRepo } from '@x/core/dist/composio/repo.js';
 import {
   listImportantThreads,
   listEverythingElseThreads,
@@ -121,6 +123,170 @@ import { TurnEventHub } from '@x/core/dist/runtime/turns/event-hub.js';
 import { SessionIndex } from '@x/core/dist/runtime/sessions/session-index.js';
 import path from 'path';
 import fs from 'fs';
+import { CDPBrowserControlService } from './cdp-browser-service.js';
+import { registerBrowserControlService } from '@x/core/dist/di/container.js';
+
+// Database-backed repositories (PostgreSQL + Redis)
+import { DBSessionRepo, DBTurnRepo, DBRunsRepo, getDbPool, BrowserSessionRepo } from './db/db.js';
+import { RedisSessionBus, RedisTurnEventHub, getRedisCache, redisHealthCheck, closeRedis } from './db/redis.js';
+
+// ── Legal pages (Terms & Privacy) ────────────────────────────────
+// Served at /terms and /privacy — public, no auth required.
+function legalShell(title: string, bodyHtml: string): string {
+  return `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title} — Divinity Works</title>
+<style>
+  :root { --bg:#0a0a0b; --card:#151517; --text:#e8e8e8; --muted:#999; --gold:#d4af37; --border:#2a2a2e; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; line-height:1.7; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:820px; margin:0 auto; padding:48px 24px 80px; }
+  h1 { font-size:28px; font-weight:700; color:var(--gold); margin-bottom:8px; }
+  .updated { color:var(--muted); font-size:13px; margin-bottom:32px; }
+  h2 { font-size:18px; font-weight:600; margin-top:32px; margin-bottom:8px; color:#fff; }
+  p { margin-bottom:12px; font-size:15px; color:var(--text); }
+  ul { margin:8px 0 16px 24px; }
+  li { margin-bottom:6px; font-size:15px; }
+  a { color:var(--gold); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .brand { text-align:center; padding:24px 0 48px; border-bottom:1px solid var(--border); margin-bottom:32px; }
+  .brand-logo { font-size:22px; font-weight:700; color:var(--gold); letter-spacing:1px; }
+  .footer { margin-top:48px; padding-top:24px; border-top:1px solid var(--border); text-align:center; color:var(--muted); font-size:13px; }
+</style>
+</head><body>
+<div class="wrap">
+  <div class="brand"><div class="brand-logo">DIVINITY WORKS</div></div>
+  ${bodyHtml}
+  <div class="footer">
+    <p>&copy; 2026 Divinity Works. All rights reserved.</p>
+    <p>Questions? <a href="mailto:contact@divinityworks.space">contact@divinityworks.space</a></p>
+  </div>
+</div>
+</body></html>`;
+}
+
+const LEGAL_HTML = {
+  terms: legalShell('Terms of Service', `
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: July 26, 2026</p>
+
+    <h2>1. Acceptance of Terms</h2>
+    <p>By creating an account, signing in, or otherwise using Divinity Works ("Divinity," "we," "us," or "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not access or use our services.</p>
+
+    <h2>2. Description of Service</h2>
+    <p>Divinity Works provides a cloud-based AI assistant platform that enables users to interact with AI models, generate content, manage files, and automate tasks through a web interface and messaging integrations. The service is hosted on our cloud infrastructure and accessible via supported web browsers and connected messaging channels.</p>
+
+    <h2>3. Eligibility</h2>
+    <p>You must be at least 16 years of age to use Divinity Works. By using the service, you represent and warrant that you meet this age requirement and that your registration and use of Divinity complies with all applicable laws.</p>
+
+    <h2>4. Account Registration</h2>
+    <p>You are responsible for maintaining the security of your account credentials and for all activities that occur under your account. You agree to provide accurate information during registration and to update it as needed. You may not share your account credentials or transfer your account to another person.</p>
+
+    <h2>5. Acceptable Use</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>Use Divinity for any unlawful, harmful, fraudulent, or abusive purpose</li>
+      <li>Attempt to access, tamper with, or disrupt another user's data, accounts, or sessions</li>
+      <li>Reverse-engineer, decompile, or attempt to extract the source code or internal logic of the platform</li>
+      <li>Upload, transmit, or store malware, malicious code, or content that infringes intellectual property rights</li>
+      <li>Use automated scripts or bots to access the service in a manner that degrades system performance</li>
+      <li>Resell, sublicense, or redistribute access to Divinity without written authorization</li>
+    </ul>
+
+    <h2>6. AI-Generated Content</h2>
+    <p>Divinity generates responses using AI models. AI-generated content may be inaccurate, incomplete, or unsuitable for your needs. You are solely responsible for reviewing, verifying, and acting upon any AI-generated output. Divinity Works does not guarantee the accuracy, reliability, or fitness of AI-generated content for any particular purpose.</p>
+
+    <h2>7. Your Data and Content</h2>
+    <p>You retain ownership of all content you upload, create, or generate through Divinity Works. We process and store your data solely to provide and improve the service. Each user's workspace is isolated — your data is not accessible to other users. For details on data handling, see our <a href="/privacy">Privacy Policy</a>.</p>
+
+    <h2>8. Service Availability</h2>
+    <p>Divinity Works strives to maintain high availability but does not guarantee uninterrupted access. We may modify, suspend, or discontinue features, integrations, or the service itself at any time without prior notice. We are not liable for downtime, data loss, or service disruptions caused by factors beyond our control.</p>
+
+    <h2>9. Fees and Payment</h2>
+    <p>Divinity Works may offer free and paid tiers. If you subscribe to a paid plan, you agree to pay all applicable fees as described at the time of purchase. Fees are non-refundable except as required by law. We may change our pricing at any time with reasonable notice.</p>
+
+    <h2>10. Intellectual Property</h2>
+    <p>Divinity Works, including its software, design, branding, and infrastructure, is our intellectual property. These Terms do not grant you any right, title, or interest in our platform except for the limited right to use it in accordance with these Terms.</p>
+
+    <h2>11. Limitation of Liability</h2>
+    <p>To the fullest extent permitted by law, Divinity Works and its operators shall not be liable for any indirect, incidental, consequential, or punitive damages, including loss of profits, data, or goodwill, arising from your use of or inability to use the service. Our total liability for any claim shall not exceed the amount you paid us in the preceding twelve (12) months, or zero if no payment was made.</p>
+
+    <h2>12. Indemnification</h2>
+    <p>You agree to indemnify and hold Divinity Works harmless from any claims, damages, or expenses arising from your use of the service, your content, or your violation of these Terms.</p>
+
+    <h2>13. Termination</h2>
+    <p>You may stop using Divinity and delete your account at any time. We reserve the right to suspend or terminate access immediately, without notice, if we believe you have violated these Terms or if your activity poses a risk to the platform or other users.</p>
+
+    <h2>14. Dispute Resolution</h2>
+    <p>Any dispute arising from these Terms or your use of Divinity Works shall be resolved through good-faith negotiation first. If unresolved, disputes shall be submitted to binding arbitration rather than litigated in court. These Terms are governed by applicable law without conflict-of-law principles.</p>
+
+    <h2>15. Changes to Terms</h2>
+    <p>We may update these Terms at any time. Material changes will be communicated through the service or by email. Continued use after changes take effect constitutes acceptance of the revised Terms.</p>
+
+    <h2>16. Contact</h2>
+    <p>If you have questions about these Terms, contact us at <a href="mailto:contact@divinityworks.space">contact@divinityworks.space</a>.</p>
+  `),
+
+  privacy: legalShell('Privacy Policy', `
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: July 26, 2026</p>
+
+    <h2>1. Overview</h2>
+    <p>Divinity Works ("Divinity," "we," "us") respects your privacy. This Privacy Policy explains what data we collect, how we use it, and the choices you have. We design our systems to minimize data collection and isolate each user's workspace from others.</p>
+
+    <h2>2. Information We Collect</h2>
+    <p><strong>Account data:</strong> Your name and email address from your chosen sign-in provider. We do not store your password — authentication is handled by the provider you choose.</p>
+    <p><strong>Usage data:</strong> Messages you send to Divinity, AI responses, files you upload, sessions you create, and actions you take within the platform. This data is stored in your isolated per-user workspace.</p>
+    <p><strong>Technical data:</strong> IP address, browser type, device identifiers, and session timestamps for security, abuse prevention, and service operation.</p>
+    <p><strong>Cookies:</strong> We use essential cookies to maintain your authenticated session. We do not use tracking or advertising cookies.</p>
+
+    <h2>3. How We Use Your Data</h2>
+    <ul>
+      <li>To provide the AI assistant service, process your requests, and generate responses</li>
+      <li>To store your conversations, files, and workspace content so you can access them later</li>
+      <li>To authenticate you and keep your session secure</li>
+      <li>To monitor service health, prevent abuse, and diagnose technical issues</li>
+      <li>To improve the quality and reliability of the platform</li>
+    </ul>
+    <p>We do not sell your data to third parties. We do not use your content to train AI models.</p>
+
+    <h2>4. Data Sharing</h2>
+    <p>Your data is shared only with infrastructure providers that host and process the data needed to run Divinity — for example, the AI model provider that generates your responses, and the cloud infrastructure that stores your data. These providers process data under their own privacy and security commitments. We do not share your data with advertisers, data brokers, or any party beyond what is necessary to operate the service.</p>
+    <p>We may disclose data if required by law, court order, or to protect the rights, property, or safety of Divinity Works, our users, or others.</p>
+
+    <h2>5. Data Retention</h2>
+    <p>We retain your data for as long as your account is active. If you delete your account or request data deletion, we will remove your personal data from our active systems within 30 days. Residual backups may persist for up to 90 days before permanent deletion. Session and authentication logs are retained for up to 90 days for security purposes.</p>
+
+    <h2>6. Your Rights</h2>
+    <p>Depending on your jurisdiction, you may have the right to:</p>
+    <ul>
+      <li>Access the personal data we hold about you</li>
+      <li>Request correction of inaccurate data</li>
+      <li>Request deletion of your data and account</li>
+      <li>Export your data in a portable format</li>
+      <li>Object to or restrict certain processing of your data</li>
+      <li>Withdraw consent for data processing at any time</li>
+    </ul>
+    <p>To exercise any of these rights, contact <a href="mailto:contact@divinityworks.space">contact@divinityworks.space</a>.</p>
+
+    <h2>7. Security</h2>
+    <p>We implement industry-standard security measures including encrypted authentication tokens, per-user data isolation, secure session management, and access controls. Data in transit is protected with TLS. However, no system is perfectly secure, and we cannot guarantee absolute security of your data.</p>
+
+    <h2>8. International Users</h2>
+    <p>Divinity Works is hosted on cloud infrastructure that may process data in regions different from your own. If you access the service from outside the hosting region, your data may be transferred to and processed in that region. By using Divinity, you consent to such transfers.</p>
+
+    <h2>9. Children's Privacy</h2>
+    <p>Divinity Works is not intended for children under 16. We do not knowingly collect data from anyone under 16. If you believe a minor has provided data, contact us and we will delete it promptly.</p>
+
+    <h2>10. Changes to This Policy</h2>
+    <p>We may update this Privacy Policy at any time. Material changes will be communicated through the service or by email. Continued use after changes take effect constitutes acceptance of the revised policy.</p>
+
+    <h2>11. Contact</h2>
+    <p>Questions about your privacy or this policy? Contact us at <a href="mailto:contact@divinityworks.space">contact@divinityworks.space</a>.</p>
+  `)
+};
 
 // ── Per-user session manager ──────────────────────────────────────
 // Each user gets their own FSSessionRepo + FSTurnRepo pointing to
@@ -164,28 +330,24 @@ async function getUserSessions(ws: WebSocket): Promise<ISessions> {
   const userId = getUserIdFromToken(token);
   if (userSessionsCache.has(userId)) return userSessionsCache.get(userId)!;
 
-  // Create per-user directories
-  const userDir = path.join(WorkDir, 'users', userId);
-  const sessionsDir = path.join(userDir, 'storage', 'sessions');
-  const turnsDir = path.join(userDir, 'storage', 'turns');
-  fs.mkdirSync(sessionsDir, { recursive: true });
-  fs.mkdirSync(turnsDir, { recursive: true });
+  // ── Database-backed repos (PostgreSQL) ──────────────────────────
+  // Replaces file-based JSONL storage with PostgreSQL. All queries
+  // are scoped by user_id with row-level security for defense-in-depth.
+  const sessionRepo = new DBSessionRepo({ userId });
+  const turnRepo = new DBTurnRepo({ userId });
+  userTurnRepos.set(userId, turnRepo as any);
 
-  // Per-user repos
-  const sessionRepo = new FSSessionRepo({ sessionsRootDir: sessionsDir });
-  const turnRepo = new FSTurnRepo({ turnsRootDir: turnsDir });
-  userTurnRepos.set(userId, turnRepo);
-
-  // Per-user event buses (so events only fan out to the right user)
+  // Per-user event buses (in-memory for single-instance, can be swapped
+  // for RedisSessionBus when scaling to multiple instances)
   const sessionBus = new EmitterSessionBus();
   const turnEventBus = new TurnEventHub();
   userSessionBuses.set(userId, sessionBus);
   userTurnEventHubs.set(userId, turnEventBus);
 
   // Per-user turn runtime with per-user turnRepo
-  const contextResolver = createContextResolver({ turnRepo });
+  const contextResolver = createContextResolver({ turnRepo: turnRepo as any });
   const turnRuntime = new TurnRuntime({
-    turnRepo,
+    turnRepo: turnRepo as any,
     idGenerator: sharedIdGenerator,
     clock: sharedClock,
     agentResolver: sharedAgentResolver,
@@ -201,22 +363,22 @@ async function getUserSessions(ws: WebSocket): Promise<ISessions> {
 
   // Per-user sessions service
   const sessions = new SessionsImpl({
-    sessionRepo,
+    sessionRepo: sessionRepo as any,
     turnRuntime,
     idGenerator: sharedIdGenerator,
     clock: sharedClock,
     sessionBus,
   });
 
-  // Load existing sessions from disk
+  // Load existing sessions from database
   await sessions.initialize();
-  console.log(`[user:${userId}] Sessions loaded: ${sessions.listSessions().length}`);
+  console.log(`[user:${userId}] Sessions loaded from DB: ${sessions.listSessions().length}`);
 
   // Subscribe to per-user event buses — forward events only to this user's WS connections
-  sessionBus.subscribe((event) => {
+  sessionBus.subscribe((event: any) => {
     broadcastToUserClients(userId, 'sessions:events', event);
   });
-  turnEventBus.subscribeAll((event) => {
+  turnEventBus.subscribeAll((event: any) => {
     if (isDurableTurnEvent(event.event)) {
       broadcastToUserClients(userId, 'turns:events', event);
     }
@@ -358,6 +520,23 @@ container.register({
   oauthRepo: asClass(WebOAuthRepo).singleton(),
 });
 
+// ── CDP Browser Control Service ──────────────────────────────────────
+// Cloud browser: real Chromium on VM + CDP for AI control + screencast
+// streaming to web client. Replaces ElectronBrowserControlService.
+const cdpBrowser = new CDPBrowserControlService({
+  chromiumPath: process.env.CHROMIUM_PATH || 'chromium-browser',
+  port: parseInt(process.env.CDP_PORT || '9222', 10),
+  windowWidth: 1280,
+  windowHeight: 800,
+});
+container.register({
+  browserControlService: asValue(cdpBrowser),
+});
+console.log('[CDP] Browser control service registered');
+
+// Handle browser streaming + input messages (not regular IPC invoke)
+// These come through as special message types alongside 'invoke'/'subscribe'
+
 // Stub implementations for functions that live in main/ local files (not in @x/core).
 // These are Electron-dependent; the web-bridge stubs them out.
 // Note: 'rowboat' provider is handled separately above (JWT-based).
@@ -371,6 +550,14 @@ function listProviders() {
   return [];
 }
 async function startManagedGooglePick(_targetFolder: string) {
+  // Start the CDP browser (launches Chromium + creates initial Google.com tab)
+  // This function is known to be preserved in tsc output
+  cdpBrowser.start().then(() => {
+    console.log('[CDP] Browser started successfully — initial tab at Google.com');
+    broadcastToClients('browser:didUpdateState', cdpBrowser.getBrowserState());
+  }).catch((err) => {
+    console.error('[CDP] Failed to start browser:', err);
+  });
   return { error: 'not_implemented' };
 }
 function consumePendingDeepLink() {
@@ -546,6 +733,18 @@ const MIME_TYPES: Record<string, string> = {
   '.eot': 'application/vnd.ms-fontobject',
   '.wasm': 'application/wasm',
   '.map': 'application/json; charset=utf-8',
+  '.pdf': 'application/pdf',
+  '.html': 'text/html; charset=utf-8',
+  '.webp': 'image/webp',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.txt': 'text/plain; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
+  '.csv': 'text/csv; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
 };
 
 // ── Server-side auth gate ──────────────────────────────────────────
@@ -724,9 +923,73 @@ const httpServer = createServer(async (req, res) => {
 
   // Health check — always accessible (used by Cloudflare Tunnel)
   if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
+    const health = {
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      memory: { rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB' },
+      services: {} as Record<string, string>
+    };
+
+    // Check PostgreSQL
+    try {
+      const pool = getDbPool();
+      const client = await pool.connect();
+      const result = await client.query('SELECT COUNT(*) as session_count FROM sessions');
+      health.services.postgres = `ok (${result.rows[0].session_count} sessions)`;
+      client.release();
+    } catch (e) {
+      health.services.postgres = `error: ${(e as Error).message}`;
+      health.status = 'degraded';
+    }
+
+    // Check Redis
+    try {
+      const redis = getRedisCache();
+      const pong = await redis.ping();
+      health.services.redis = `ok (${pong})`;
+    } catch (e) {
+      health.services.redis = `error: ${(e as Error).message}`;
+      health.status = 'degraded';
+    }
+
+    res.writeHead(health.status === 'ok' ? 200 : 503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(health));
     return;
+  }
+
+  // Metrics endpoint — basic stats
+  if (req.url === '/metrics') {
+    const metrics = {
+      timestamp: new Date().toISOString(),
+      uptime_seconds: Math.round(process.uptime()),
+      connected_clients: clients.size,
+      memory_mb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+      active_users: webTokens.size
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(metrics));
+    return;
+  }
+
+  // ── LEGAL PAGES ──────────────────────────────────────────────────
+  // Public, no auth required. Served as standalone HTML.
+  const reqPath = (req.url || '/').split('?')[0];
+  if (reqPath === '/terms' || reqPath === '/privacy') {
+    const isTerms = reqPath === '/terms';
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(isTerms ? LEGAL_HTML.terms : LEGAL_HTML.privacy);
+    return;
+  }
+
+  // ── Deepgram STT WebSocket: skip auth, let ws library handle upgrade ──
+  // WebSocket upgrade requests must not get an HTTP response body — the
+  // ws library handles them via the 'upgrade' event on the HTTP server.
+  if ((req.headers.upgrade || '').includes('websocket')) {
+    const wsPath = (req.url || '/').split('?')[0];
+    if (wsPath.startsWith('/deepgram/')) {
+      return; // do not send a response — ws WebSocketServer will handle the upgrade
+    }
   }
 
   // ── AUTH GATE ───────────────────────────────────────────────────
@@ -742,9 +1005,12 @@ const httpServer = createServer(async (req, res) => {
   let token = urlToken || cookieToken || bearerToken || null;
   let refreshToken = urlRefresh || cookieRefresh || null;
 
-  // ── Token refresh: if access token is expired but we have a refresh
-  // token, silently get a new access token from the SaaS Worker. ──
-  if (token && !isTokenValid(token) && refreshToken) {
+  // ── Token refresh: if access token is missing or expired but we have
+  // a refresh token, silently get a new access token from the SaaS Worker.
+  // This is the key to long-lived browser sessions: the access JWT expires,
+  // but the refresh token (30-day cookie) lets us silently renew without
+  // bouncing the user to the sign-in page. ──
+  if ((!token || !isTokenValid(token)) && refreshToken) {
     try {
       const refreshRes = await fetch('https://dash.divinityworks.space/auth/refresh', {
         method: 'POST',
@@ -757,14 +1023,16 @@ const httpServer = createServer(async (req, res) => {
           token = tokens.access_token;
           // Update refresh token if rotated
           if (tokens.refresh_token) refreshToken = tokens.refresh_token;
-          // Set updated cookies
+          // Set updated cookies — long Max-Age so the browser keeps them
           const cookies = [
-            `dw_access_token=${tokens.access_token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
+            `dw_access_token=${tokens.access_token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`,
             `dw_refresh_token=${refreshToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
           ];
           res.setHeader('Set-Cookie', cookies);
           console.log('Token refreshed successfully');
         }
+      } else {
+        console.log(`Token refresh failed: ${refreshRes.status} ${refreshRes.statusText}`);
       }
     } catch (refreshErr) {
       console.error('Token refresh failed:', refreshErr);
@@ -793,7 +1061,7 @@ const httpServer = createServer(async (req, res) => {
   // (JS, CSS, fonts) are automatically authenticated.
   if (urlToken) {
     const cookies = [
-      `dw_access_token=${urlToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
+      `dw_access_token=${urlToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`,
     ];
     if (urlRefresh) {
       cookies.push(`dw_refresh_token=${urlRefresh}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`);
@@ -803,6 +1071,61 @@ const httpServer = createServer(async (req, res) => {
 
   let urlPath = req.url?.split('?')[0] || '/';
   if (urlPath === '/') urlPath = '/web.html';
+
+  // ── File download endpoint ──────────────────────────────────────
+  // Serves AI-created files (PDFs, images, slides, docs, etc.) from the
+  // user's workspace to the browser. Files may be in the per-user
+  // workspace directory OR in the root WorkDir (some AI tools write
+  // there directly). Checks per-user dir first, then root as fallback.
+  if (urlPath.startsWith('/files/')) {
+    const userId = getUserIdFromToken(token!);
+    const userWorkDir = path.join(WorkDir, 'users', userId);
+    // Strip /files/ prefix and resolve relative to user workspace
+    const relativePath = urlPath.slice('/files/'.length);
+    // Security: prevent path traversal
+    let resolvedPath = path.resolve(userWorkDir, relativePath);
+    // If not found in per-user dir, try root WorkDir (AI may write there)
+    try {
+      await stat(resolvedPath);
+    } catch {
+      resolvedPath = path.resolve(WorkDir, relativePath);
+    }
+    // Final security check: path must be inside WorkDir
+    if (!resolvedPath.startsWith(WorkDir)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden: path outside workspace');
+      return;
+    }
+    try {
+      const fileStat = await stat(resolvedPath);
+      if (!fileStat.isFile()) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not found');
+        return;
+      }
+      const ext = extname(resolvedPath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      const data = await readFile(resolvedPath);
+      // For PDFs, images, text: inline (preview in browser)
+      // For unknown/binary: attachment (download)
+      const inlineTypes = ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp',
+        '.txt', '.md', '.json', '.csv', '.html', '.js', '.css', '.mp4', '.webm', '.mp3', '.wav'];
+      const disposition = inlineTypes.includes(ext) ? 'inline' : 'attachment';
+      const filename = path.basename(resolvedPath);
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Content-Disposition': `${disposition}; filename="${filename}"`,
+        'Content-Length': fileStat.size,
+        'Cache-Control': 'no-cache',
+      });
+      res.end(data);
+      return;
+    } catch {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('File not found');
+      return;
+    }
+  }
 
   const filePath = join(RENDERER_DIST, urlPath);
 
@@ -836,7 +1159,104 @@ const httpServer = createServer(async (req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+const wss = new WebSocketServer({ noServer: true });
+const deepgramSttWss = new WebSocketServer({ noServer: true });
+
+// ── Single upgrade handler for both WebSocketServers ────────────
+// When two WebSocketServer instances both attach to the same httpServer
+// via { server }, only the first one's upgrade listener fires. Using
+// noServer mode with a single manual upgrade handler fixes this.
+httpServer.on('upgrade', (req, socket, head) => {
+  const wsPath = (req.url || '/').split('?')[0];
+  if (wsPath.startsWith('/deepgram/')) {
+    deepgramSttWss.handleUpgrade(req, socket, head, (ws) => {
+      deepgramSttWss.emit('connection', ws, req);
+    });
+  } else {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit('connection', ws, req);
+    });
+  }
+});
+
+deepgramSttWss.on('connection', async (clientWs: WebSocket, req: any) => {
+  let deepgramApiKey = '';
+  try {
+    const configPath = resolve(WorkDir, 'config', 'deepgram.json');
+    const raw = readFileSync(configPath, 'utf8');
+    deepgramApiKey = JSON.parse(raw)?.apiKey || '';
+  } catch {
+    console.error('[deepgram-proxy] No deepgram.json found');
+    clientWs.close(1011, 'Deepgram not configured');
+    return;
+  }
+
+  if (!deepgramApiKey) {
+    clientWs.close(1011, 'Deepgram API key missing');
+    return;
+  }
+
+  // Forward query params from the incoming request to Deepgram
+  const dgUrl = `wss://api.deepgram.com/v1/listen${req.url?.replace(/^\/deepgram\/v1\/listen/, '') || ''}`;
+
+  let dgWs: WebSocket;
+  try {
+    // Use the ws library's WebSocket explicitly (the global WebSocket in Node 22
+    // has different behaviour and doesn't support subprotocols the same way)
+    dgWs = new WebSocket(dgUrl, ['token', deepgramApiKey]);
+    console.log('[deepgram-proxy] Connecting to Deepgram:', dgUrl.substring(0, 80));
+  } catch (err: any) {
+    console.error('[deepgram-proxy] Constructor error:', err?.message, err?.stack);
+    clientWs.close(1011, 'Failed to connect to Deepgram');
+    return;
+  }
+
+  let dgReady = false;
+  const pendingMessages: Buffer[] = [];
+
+  // Deepgram → browser: forward transcript results
+  dgWs.on('open', () => {
+    dgReady = true;
+    console.log('[deepgram-proxy] Deepgram connected');
+    for (const msg of pendingMessages) {
+      dgWs.send(msg);
+    }
+    pendingMessages.length = 0;
+  });
+
+  dgWs.on('message', (data: Buffer) => {
+    if (clientWs.readyState === WebSocket.OPEN) {
+      clientWs.send(data);
+    }
+  });
+
+  dgWs.on('error', (err: Error) => {
+    console.error('[deepgram-proxy] Upstream error:', err?.message, err?.stack);
+    try { clientWs.close(1011, 'Deepgram connection error'); } catch {}
+  });
+
+  dgWs.on('close', (code: number, reason: Buffer) => {
+    console.log('[deepgram-proxy] Deepgram closed:', code, reason.toString());
+    try { clientWs.close(1000, 'Deepgram closed'); } catch {}
+  });
+
+  // Browser → Deepgram: forward mic audio
+  clientWs.on('message', (data: Buffer) => {
+    if (dgReady && dgWs.readyState === WebSocket.OPEN) {
+      dgWs.send(data);
+    } else if (!dgReady) {
+      pendingMessages.push(data);
+    }
+  });
+
+  clientWs.on('close', () => {
+    try { dgWs.close(); } catch {}
+  });
+
+  clientWs.on('error', () => {
+    try { dgWs.close(); } catch {}
+  });
+});
 
 // ── Load existing sessions from disk on startup ───────────────────
 // The SessionIndex is an in-memory Map that starts empty. Without
@@ -848,10 +1268,27 @@ httpServer.listen(8790, async () => {
   console.log('  Static files: ' + RENDERER_DIST);
   console.log('  WebSocket: ws://localhost:8790/ws');
 
+  // Start the Divinity Apps server (port 0 — auto-assigned) so that
+  // apps:list and apps:serverStatus report it as running instead of
+  // "Apps server is not running."
+  try {
+    await appsServer.init();
+    console.log('  Apps server initialized.');
+  } catch (e) {
+    console.error('  Apps server failed to start:', e);
+  }
+
   // Rebuild the in-memory session index from disk files
   // Per-user sessions are now initialized lazily on first WS connection
   // via getUserSessions(ws). No global initialization needed here.
   console.log('  Per-user sessions will be loaded lazily on first connection.');
+
+  // Ensure browser_sessions table exists for cookie persistence
+  try {
+    await BrowserSessionRepo.ensureSchema();
+  } catch (e) {
+    console.error('  Browser sessions table init failed:', e);
+  }
 });
 
 // Store connected clients and subscriptions
@@ -918,6 +1355,43 @@ function unsubscribeClient(client: WebSocket, channel: string): void {
   }
 }
 
+/** Sync all Composio connections for a user from the API to the local repo.
+ *  Called on WebSocket connect to ensure the AI runtime sees existing connections. */
+async function syncUserComposioConnections(userId: string) {
+  if (!COMPOSIO_API_KEY) return;
+  try {
+    const res = await fetch(`${COMPOSIO_BASE}/connected_accounts?user_id=${encodeURIComponent(userId)}`, {
+      headers: composioHeaders(),
+    });
+    if (!res.ok) return;
+    const data = await res.json() as any;
+    const activeAccounts = (data.items || []).filter((a: any) =>
+      a.status === 'ACTIVE' || a.connection_status === 'ACTIVE'
+    );
+    let changed = false;
+    for (const a of activeAccounts) {
+      const slug = a.toolkit_slug || a.toolkit?.slug || a.slug;
+      if (slug) {
+        composioAccountsRepo.saveAccount({
+          id: a.id,
+          authConfigId: a.auth_config?.id || '',
+          status: 'ACTIVE',
+          toolkitSlug: slug,
+          createdAt: a.created_at || new Date().toISOString(),
+          lastUpdatedAt: new Date().toISOString(),
+        });
+        changed = true;
+      }
+    }
+    if (changed) {
+      invalidateCopilotInstructionsCache();
+      console.log(`[composio] Synced ${activeAccounts.length} active connections for user ${userId}`);
+    }
+  } catch (err) {
+    console.error('[composio] syncUserConnections error:', err);
+  }
+}
+
 // Handle incoming WebSocket messages
 // Extract auth token from WebSocket subprotocol (passed by web-preload shim)
 const clientAuthTokens = new Map<WebSocket, string>();
@@ -939,34 +1413,87 @@ wss.on('connection', (ws: WebSocket, req: any) => {
     const userId = getUserIdFromToken(authToken);
     registerUserClient(userId, ws);
     console.log('New client connected', authToken ? `(authenticated, user: ${userId})` : '(anonymous)');
+    
+    // Sync Composio connections for this user on connect — ensures the AI
+    // runtime discovers any connections that were created via the web UI
+    // (including from a previous session or a different device).
+    if (COMPOSIO_API_KEY) {
+      syncUserComposioConnections(userId).catch(err =>
+        console.error('[composio] startup sync error:', err)
+      );
+    }
   }
   clients.add(ws);
   
   ws.on('message', (data) => {
     try {
       const message = JSON.parse(data.toString());
-      
+
       // Set active token for this request's scope so @x/core functions
       // (getAccessToken, isSignedIn, getBillingInfo, etc.) can use it
       const wsToken = webTokens.get(ws);
       if (wsToken) activeToken = wsToken;
-      
-      if (message.type === 'invoke') {
-        handleInvoke(ws, message);
-      } else if (message.type === 'subscribe') {
-        subscribeClient(ws, message.channel);
-        ws.send(JSON.stringify({
-          type: 'response',
-          reqId: message.reqId,
-          result: { success: true }
-        }));
-      } else if (message.type === 'unsubscribe') {
-        unsubscribeClient(ws, message.channel);
-        ws.send(JSON.stringify({
-          type: 'response',
-          reqId: message.reqId,
-          result: { success: true }
-        }));
+
+      // ── Per-user workspace isolation ──────────────────────────
+      // Wrap the entire message handler in AsyncLocalStorage so that
+      // workspace.getWorkDir() resolves to the user's directory.
+      const _userId = wsToken ? getUserIdFromToken(wsToken) : null;
+      const _userDir = _userId ? path.join(WorkDir, 'users', _userId) : null;
+
+      if (_userDir) {
+        // Ensure per-user workspace directories exist
+        fs.mkdirSync(path.join(_userDir, 'knowledge'), { recursive: true });
+        fs.mkdirSync(path.join(_userDir, 'agents'), { recursive: true });
+        fs.mkdirSync(path.join(_userDir, 'skills'), { recursive: true });
+        fs.mkdirSync(path.join(_userDir, 'bases'), { recursive: true });
+        fs.mkdirSync(path.join(_userDir, 'config'), { recursive: true });
+        fs.mkdirSync(path.join(_userDir, 'storage', 'runs'), { recursive: true });
+      }
+
+      const dispatch = () => {
+        if (message.type === 'invoke') {
+          handleInvoke(ws, message);
+        } else if (message.type === 'subscribe') {
+          subscribeClient(ws, message.channel);
+          ws.send(JSON.stringify({
+            type: 'response',
+            reqId: message.reqId,
+            result: { success: true }
+          }));
+        } else if (message.type === 'unsubscribe') {
+          unsubscribeClient(ws, message.channel);
+          ws.send(JSON.stringify({
+            type: 'response',
+            reqId: message.reqId,
+            result: { success: true }
+          }));
+        } else if (message.type === 'browser:screencast:start') {
+          // Start streaming browser frames to this client
+          cdpBrowser.addScreencastClient(ws);
+          ws.send(JSON.stringify({
+            type: 'response',
+            reqId: message.reqId,
+            result: { success: true }
+          }));
+        } else if (message.type === 'browser:screencast:stop') {
+          cdpBrowser.removeScreencastClient(ws);
+          ws.send(JSON.stringify({
+            type: 'response',
+            reqId: message.reqId,
+            result: { success: true }
+          }));
+        } else if (message.type === 'browser:input') {
+          // Forward mouse/keyboard input from user to the browser via CDP
+          cdpBrowser.handleInputEvent(ws, message.input).catch(err => {
+            console.error('[CDP] Input error:', err);
+          });
+        }
+      };
+
+      if (_userDir) {
+        userWorkDirStorage.run(_userDir, dispatch);
+      } else {
+        dispatch();
       }
     } catch (error) {
       console.error(`Error processing message: ${error}`);
@@ -984,7 +1511,8 @@ wss.on('connection', (ws: WebSocket, req: any) => {
     clientAuthTokens.delete(ws);
     webTokens.delete(ws);
     unregisterUserClient(ws); // remove from per-user event broadcast list
-    
+    cdpBrowser.removeScreencastClient(ws); // stop streaming browser frames to this client
+
     // Clean up subscriptions
     for (const [channel, subscribers] of subscriptions) {
       subscribers.delete(ws);
@@ -999,6 +1527,410 @@ wss.on('connection', (ws: WebSocket, req: any) => {
   });
 });
 
+// ── Composio API helpers ──────────────────────────────────────────────────
+// All Composio calls use the server-side COMPOSIO_API_KEY.
+// Users are identified by their Divinity user_id (passed as Composio user_id).
+
+const COMPOSIO_BASE = process.env.COMPOSIO_BASE_URL || 'https://backend.composio.dev/api/v3';
+const COMPOSIO_API_KEY = process.env.COMPOSIO_API_KEY || '';
+const COMPOSIO_CALLBACK_URL = 'https://dash.divinityworks.space/api/composio/callback';
+
+function composioHeaders() {
+  return {
+    'Authorization': `Bearer ${COMPOSIO_API_KEY}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+// In-memory store of active connection flows (keyed by userId:toolkitSlug)
+interface ActiveFlow {
+  connectedAccountId: string;
+  authConfigId: string;
+  toolkitSlug: string;
+  userId: string;
+  startedAt: number;
+  timeout?: ReturnType<typeof setTimeout>;
+}
+const activeComposioFlows = new Map<string, ActiveFlow>();
+
+/** Initiate a Composio OAuth connection for any toolkit (Gmail, Calendar, GitHub, etc.) */
+async function initiateComposioConnection(toolkitSlug: string, userId: string) {
+  if (!COMPOSIO_API_KEY) {
+    return { success: false, error: 'Connect service is not configured.' };
+  }
+  try {
+    const slug = toolkitSlug.toLowerCase();
+    const flowKey = `${userId}:${slug}`;
+
+    // Abort existing flow
+    const existing = activeComposioFlows.get(flowKey);
+    if (existing && existing.timeout) clearTimeout(existing.timeout);
+    activeComposioFlows.delete(flowKey);
+
+    // Step 1: Get the toolkit to check it supports managed OAuth2
+    const toolkitRes = await fetch(`${COMPOSIO_BASE}/toolkits/${slug}`, {
+      headers: composioHeaders(),
+    });
+    if (!toolkitRes.ok) {
+      return { success: false, error: `Could not find service "${slug}".` };
+    }
+    const toolkit = await toolkitRes.json() as any;
+    const schemes = toolkit.composio_managed_auth_schemes || [];
+    if (!schemes.includes('OAUTH2')) {
+      return { success: false, error: `"${slug}" does not support managed OAuth2.` };
+    }
+
+    // Step 2: Find or create a managed OAuth2 auth config
+    const listRes = await fetch(`${COMPOSIO_BASE}/auth_configs?toolkit_slug=${encodeURIComponent(slug)}&is_composio_managed=true`, {
+      headers: composioHeaders(),
+    });
+    let authConfigId: string | null = null;
+    if (listRes.ok) {
+      const listData = await listRes.json() as any;
+      const managed = (listData.items || []).find((c: any) =>
+        c.auth_scheme === 'OAUTH2' && c.is_composio_managed
+      );
+      if (managed) authConfigId = managed.id;
+    }
+
+    if (!authConfigId) {
+      const createRes = await fetch(`${COMPOSIO_BASE}/auth_configs`, {
+        method: 'POST',
+        headers: composioHeaders(),
+        body: JSON.stringify({
+          toolkit: { slug },
+          auth_config: { type: 'use_composio_managed_auth', name: `divinityworks-${slug}` },
+        }),
+      });
+      if (!createRes.ok) {
+        return { success: false, error: 'Failed to set up the connection. Please try again.' };
+      }
+      const created = await createRes.json() as any;
+      authConfigId = created.auth_config?.id;
+    }
+
+    // Step 3: Create connected account via /connected_accounts/link (new v3 endpoint)
+    const linkRes = await fetch(`${COMPOSIO_BASE}/connected_accounts/link`, {
+      method: 'POST',
+      headers: composioHeaders(),
+      body: JSON.stringify({
+        auth_config_id: authConfigId,
+        user_id: userId,
+        callback_url: COMPOSIO_CALLBACK_URL,
+      }),
+    });
+    if (!linkRes.ok) {
+      const errBody = await linkRes.text();
+      console.error('[composio] linkAccount error:', linkRes.status, errBody);
+      return { success: false, error: 'Failed to start the connection process.' };
+    }
+    const linkData = await linkRes.json() as any;
+    const redirectUrl = linkData.redirect_url;
+    const connectedAccountId = linkData.connected_account_id;
+
+    if (!redirectUrl) {
+      return { success: false, error: 'No authorization URL was provided.' };
+    }
+
+    // Track the flow
+    activeComposioFlows.set(flowKey, {
+      connectedAccountId,
+      authConfigId,
+      toolkitSlug: slug,
+      userId,
+      startedAt: Date.now(),
+      timeout: setTimeout(() => activeComposioFlows.delete(flowKey), 5 * 60 * 1000),
+    });
+
+    return { success: true, redirectUrl, connectedAccountId };
+  } catch (err) {
+    console.error('[composio] initiateConnection error:', err);
+    return { success: false, error: 'Something went wrong starting the connection.' };
+  }
+}
+
+/** Check if a toolkit is connected for this user */
+async function getComposioConnectionStatus(toolkitSlug: string, userId: string) {
+  if (!COMPOSIO_API_KEY) {
+    return { success: false, connected: false };
+  }
+  try {
+    // Check local repo first — if already ACTIVE, no need to poll Composio
+    if (composioAccountsRepo.isConnected(toolkitSlug)) {
+      return { success: true, isConnected: true, status: 'ACTIVE' };
+    }
+
+    // Check in-memory flow for in-progress OAuth
+    const flowKey = `${userId}:${toolkitSlug}`;
+    const flow = activeComposioFlows.get(flowKey);
+    if (!flow) {
+      // No in-memory flow — check Composio API directly for this user+toolkit
+      const listRes = await fetch(`${COMPOSIO_BASE}/connected_accounts?user_id=${encodeURIComponent(userId)}&toolkit_slug=${encodeURIComponent(toolkitSlug)}`, {
+        headers: composioHeaders(),
+      });
+      if (listRes.ok) {
+        const listData = await listRes.json() as any;
+        const active = (listData.items || []).find((a: any) =>
+          (a.status === 'ACTIVE' || a.connection_status === 'ACTIVE') &&
+          (a.toolkit_slug === toolkitSlug || a.toolkit?.slug === toolkitSlug)
+        );
+        if (active) {
+          // Persist to local repo so the AI runtime can discover it
+          composioAccountsRepo.saveAccount({
+            id: active.id,
+            authConfigId: active.auth_config?.id || '',
+            status: 'ACTIVE',
+            toolkitSlug,
+            createdAt: active.created_at || new Date().toISOString(),
+            lastUpdatedAt: new Date().toISOString(),
+          });
+          invalidateCopilotInstructionsCache();
+          return { success: true, isConnected: true, status: 'ACTIVE' };
+        }
+      }
+      return { success: true, isConnected: false };
+    }
+
+    // Check the account status from Composio
+    const res = await fetch(`${COMPOSIO_BASE}/connected_accounts/${flow.connectedAccountId}`, {
+      headers: composioHeaders(),
+    });
+    if (!res.ok) {
+      return { success: true, isConnected: false };
+    }
+    const account = await res.json() as any;
+    const status = account.status || account.connection_status;
+
+    if (status === 'ACTIVE') {
+      activeComposioFlows.delete(flowKey);
+      // Persist to local repo so the AI runtime discovers it
+      composioAccountsRepo.saveAccount({
+        id: flow.connectedAccountId,
+        authConfigId: flow.authConfigId,
+        status: 'ACTIVE',
+        toolkitSlug,
+        createdAt: new Date().toISOString(),
+        lastUpdatedAt: new Date().toISOString(),
+      });
+      invalidateCopilotInstructionsCache();
+      return { success: true, isConnected: true, status: 'ACTIVE' };
+    }
+    if (status === 'FAILED' || status === 'EXPIRED') {
+      activeComposioFlows.delete(flowKey);
+      return { success: true, isConnected: false, status, error: 'Connection was not completed.' };
+    }
+    return { success: true, isConnected: false, status: status || 'PENDING' };
+  } catch (err) {
+    console.error('[composio] getConnectionStatus error:', err);
+    return { success: false, connected: false, error: 'Failed to check connection status.' };
+  }
+}
+
+/** Force a sync of the connection status (used after OAuth callback) */
+async function syncComposioConnection(connectedAccountId: string, toolkitSlug: string, userId: string) {
+  if (!COMPOSIO_API_KEY) {
+    return { success: false, error: 'Connect service is not configured.' };
+  }
+  try {
+    const res = await fetch(`${COMPOSIO_BASE}/connected_accounts/${connectedAccountId}`, {
+      headers: composioHeaders(),
+    });
+    if (!res.ok) {
+      return { success: false, error: 'Failed to check connection.' };
+    }
+    const account = await res.json() as any;
+    const status = account.status || account.connection_status;
+
+    if (status === 'ACTIVE') {
+      const flowKey = `${userId}:${toolkitSlug}`;
+      activeComposioFlows.delete(flowKey);
+      // Persist to local repo so the AI runtime discovers it
+      composioAccountsRepo.saveAccount({
+        id: connectedAccountId,
+        authConfigId: account.auth_config?.id || '',
+        status: 'ACTIVE',
+        toolkitSlug,
+        createdAt: account.created_at || new Date().toISOString(),
+        lastUpdatedAt: new Date().toISOString(),
+      });
+      invalidateCopilotInstructionsCache();
+      return { success: true, isConnected: true, status: 'ACTIVE' };
+    }
+    return { success: true, isConnected: false, status };
+  } catch (err) {
+    console.error('[composio] syncConnection error:', err);
+    return { success: false, error: 'Failed to sync connection.' };
+  }
+}
+
+/** List all connected accounts for a user — merges local repo with Composio API */
+async function listConnectedComposio(userId: string) {
+  if (!COMPOSIO_API_KEY) {
+    // Fall back to local repo only
+    const localToolkits = composioAccountsRepo.getConnectedToolkits();
+    return { toolkits: localToolkits.map(slug => ({ slug, status: 'ACTIVE' })) };
+  }
+  try {
+    const res = await fetch(`${COMPOSIO_BASE}/connected_accounts?user_id=${encodeURIComponent(userId)}`, {
+      headers: composioHeaders(),
+    });
+    if (!res.ok) {
+      // Fall back to local repo
+      const localToolkits = composioAccountsRepo.getConnectedToolkits();
+      return { toolkits: localToolkits.map(slug => ({ slug, status: 'ACTIVE' })) };
+    }
+    const data = await res.json() as any;
+    const items = (data.items || data || []).filter((a: any) =>
+      a.status === 'ACTIVE' || a.connection_status === 'ACTIVE'
+    );
+    // Sync each active account to local repo so AI runtime discovers them
+    for (const a of items) {
+      const slug = a.toolkit_slug || a.toolkit?.slug || a.slug;
+      if (slug) {
+        composioAccountsRepo.saveAccount({
+          id: a.id,
+          authConfigId: a.auth_config?.id || '',
+          status: 'ACTIVE',
+          toolkitSlug: slug,
+          createdAt: a.created_at || new Date().toISOString(),
+          lastUpdatedAt: new Date().toISOString(),
+        });
+      }
+    }
+    
+    // Get connection status for each slug
+    const localToolkits = composioAccountsRepo.getConnectedToolkits();
+    const remoteSlugs = new Set(items.map((a: any) => a.toolkit_slug || a.toolkit?.slug || a.slug));
+    const allSlugs = new Set([...localToolkits, ...remoteSlugs]);
+    
+    const toolkitStatuses = Array.from(allSlugs).map(slug => {
+      const remoteAccount = items.find((a: any) => 
+        (a.toolkit_slug || a.toolkit?.slug || a.slug) === slug
+      );
+      
+      if (remoteAccount) {
+        return {
+          slug,
+          status: 'ACTIVE',
+        };
+      }
+      
+      // Check local repo
+      const localAccount = composioAccountsRepo.getAccount(slug);
+      if (localAccount && localAccount.status === 'ACTIVE') {
+        return {
+          slug,
+          status: 'ACTIVE',
+        };
+      }
+      
+      return {
+        slug,
+        status: 'INACTIVE',
+      };
+    });
+    
+    return {
+      toolkits: toolkitStatuses,
+    };
+  } catch (err) {
+    console.error('[composio] listConnected error:', err);
+    const localToolkits = composioAccountsRepo.getConnectedToolkits();
+    return { toolkits: localToolkits.map(slug => ({ slug, status: 'ACTIVE' })) };
+  }
+}
+
+/** List available toolkits from Composio */
+async function listComposioToolkits() {
+  if (!COMPOSIO_API_KEY) {
+    return { items: [] };
+  }
+  try {
+    const res = await fetch(`${COMPOSIO_BASE}/toolkits?page_size=100`, {
+      headers: composioHeaders(),
+    });
+    if (!res.ok) {
+      return { items: [] };
+    }
+    const data = await res.json() as any;
+    const items = data.items || data || [];
+    return {
+      items: items.map((t: any) => ({
+        slug: t.slug,
+        name: t.name,
+        meta: {
+          logo: t.logo,
+          description: t.description,
+        },
+      })),
+    };
+  } catch (err) {
+    console.error('[composio] listToolkits error:', err);
+    return { items: [] };
+  }
+}
+
+/** Search Composio tools */
+async function searchComposioTools(query: string) {
+  if (!COMPOSIO_API_KEY) {
+    return { tools: [] };
+  }
+  try {
+    const res = await fetch(`${COMPOSIO_BASE}/tools?search=${encodeURIComponent(query)}&page_size=50`, {
+      headers: composioHeaders(),
+    });
+    if (!res.ok) {
+      return { tools: [] };
+    }
+    const data = await res.json() as any;
+    const items = data.items || data || [];
+    return {
+      tools: items.map((t: any) => ({
+        slug: t.slug,
+        name: t.name,
+        description: t.description,
+        toolkit: t.toolkit || t.toolkit_slug,
+      })),
+    };
+  } catch (err) {
+    console.error('[composio] searchTools error:', err);
+    return { tools: [] };
+  }
+}
+
+/** Disconnect a toolkit */
+async function disconnectComposio(toolkitSlug: string, userId: string) {
+  if (!COMPOSIO_API_KEY) {
+    return { success: false, error: 'Connect service is not configured.' };
+  }
+  try {
+    const flowKey = `${userId}:${toolkitSlug}`;
+    const flow = activeComposioFlows.get(flowKey);
+    if (flow) {
+      await fetch(`${COMPOSIO_BASE}/connected_accounts/${flow.connectedAccountId}`, {
+        method: 'DELETE',
+        headers: composioHeaders(),
+      });
+      activeComposioFlows.delete(flowKey);
+    }
+    // Also check local repo for the account and delete from Composio API
+    const account = composioAccountsRepo.getAccount(toolkitSlug);
+    if (account) {
+      await fetch(`${COMPOSIO_BASE}/connected_accounts/${account.id}`, {
+        method: 'DELETE',
+        headers: composioHeaders(),
+      });
+    }
+    // Always clean up local state
+    composioAccountsRepo.deleteAccount(toolkitSlug);
+    invalidateCopilotInstructionsCache();
+    return { success: true };
+  } catch (err) {
+    console.error('[composio] disconnect error:', err);
+    return { success: false, error: 'Failed to disconnect.' };
+  }
+}
+
 // Handle invoke requests
 async function handleInvoke(ws: WebSocket, message: any) {
   const { channel, reqId, args } = message;
@@ -1006,6 +1938,10 @@ async function handleInvoke(ws: WebSocket, message: any) {
   try {
     // Validate request payload using shared validation
     const validatedArgs = ipcShared.validateRequest(channel, args);
+    
+    // Get userId from the WebSocket's auth token
+    const token = webTokens.get(ws) || '';
+    const userId = token ? getUserIdFromToken(token) : 'anonymous';
     
     // Handle each channel
     let result;
@@ -1054,7 +1990,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'workspace:writeFile':
-        result = await workspace.writeFile(validatedArgs.path, validatedArgs.content, validatedArgs.encoding);
+        result = await workspace.writeFile(validatedArgs.path, validatedArgs.data, validatedArgs.opts);
         break;
         
       case 'workspace:mkdir':
@@ -1174,6 +2110,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         
       case 'runs:createMessage':
 
+        console.log('[runs:createMessage] voiceOutput:', validatedArgs.voiceOutput, 'voiceInput:', validatedArgs.voiceInput, 'runId:', validatedArgs.runId);
         const messageId = await runsCore.createMessage(
           validatedArgs.runId, 
           validatedArgs.message, 
@@ -1569,14 +2506,128 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       // Voice channels
-      case 'voice:getConfig':
-        result = await voice.getVoiceConfig();
+      case 'voice:getConfig': {
+        // WEB-ONLY: merge local deepgram config (if present) with SaaS config.
+        // The renderer checks config.deepgram to decide voiceAvailable.
+        const localConfig = await voice.getVoiceConfig();
+        const workerToken = clientAuthTokens.get(ws) || '';
+        console.log('[voice:getConfig] workerToken:', !!workerToken, 'localConfig:', JSON.stringify(localConfig).substring(0, 100));
+        result = {
+          ...localConfig,
+          // When signed in, SaaS path is available even without local keys
+          rowboat: workerToken ? { connected: true } : null,
+        };
         break;
-        
-      case 'voice:synthesize':
-        result = await voice.synthesizeSpeech(validatedArgs.text);
+      }
+
+      case 'voice:synthesize': {
+        // WEB-ONLY: call the SaaS Worker's /api/tts proxy directly with the
+        // user's JWT, instead of relying on voice.synthesizeSpeech() which
+        // checks isSignedIn() (reads local oauth.json — always false in web mode).
+        const workerToken = clientAuthTokens.get(ws) || '';
+        console.log('[voice:synthesize] called, hasToken:', !!workerToken, 'text:', validatedArgs.text?.substring(0, 50));
+        if (!workerToken) {
+          result = { error: 'Sign in to use voice output' };
+          break;
+        }
+        try {
+          const ttsUrl = `${API_URL}/api/tts`;
+          const ttsRes = await fetch(ttsUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${workerToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: validatedArgs.text,
+              model: 'aura-asteria-en',
+              encoding: 'mp3',
+            }),
+          });
+          if (!ttsRes.ok) {
+            const errText = await ttsRes.text().catch(() => '');
+            console.error('[voice:synthesize] TTS proxy error:', ttsRes.status, errText);
+            result = { error: 'TTS synthesis failed' };
+          } else {
+            // Deepgram returns raw audio bytes — convert to base64
+            const audioBuf = Buffer.from(await ttsRes.arrayBuffer());
+            result = {
+              audioBase64: audioBuf.toString('base64'),
+              mimeType: 'audio/mpeg',
+            };
+          }
+        } catch (err: any) {
+          console.error('[voice:synthesize] Error:', err?.message);
+          result = { error: 'TTS synthesis failed' };
+        }
         break;
-        
+      }
+
+      case 'voice:synthesizeStreamStart': {
+        // WEB-ONLY: streaming TTS — same proxy, but stream chunks back via WS
+        const workerToken = clientAuthTokens.get(ws) || '';
+        if (!workerToken) {
+          result = { ok: false, error: 'Sign in to use voice output' };
+          break;
+        }
+        try {
+          const ttsUrl = `${API_URL}/api/tts`;
+          const ttsRes = await fetch(ttsUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${workerToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: validatedArgs.text,
+              model: 'aura-asteria-en',
+              encoding: 'mp3',
+            }),
+          });
+          if (!ttsRes.ok) {
+            result = { ok: false, error: 'TTS stream failed' };
+          } else {
+            // Read the full audio and send as a single chunk — the renderer
+            // expects chunk events then a done event on the 'voice:tts-chunk' channel
+            const audioBuf = Buffer.from(await ttsRes.arrayBuffer());
+            const base64 = audioBuf.toString('base64');
+            // Send chunk + done events via the WS connection.
+            // The renderer's useVoiceTTS.ts listens on 'voice:tts-chunk' and
+            // expects { requestId, chunkBase64?, done?, error? }
+            ws.send(JSON.stringify({
+              type: 'event',
+              channel: 'voice:tts-chunk',
+              data: { requestId: validatedArgs.requestId, chunkBase64: base64 },
+            }));
+            ws.send(JSON.stringify({
+              type: 'event',
+              channel: 'voice:tts-chunk',
+              data: { requestId: validatedArgs.requestId, done: true },
+            }));
+            result = { ok: true };
+          }
+        } catch (err: any) {
+          console.error('[voice:synthesizeStreamStart] Error:', err?.message);
+          result = { ok: false, error: 'TTS stream failed' };
+        }
+        break;
+      }
+
+      case 'voice:synthesizeStreamCancel':
+        // No-op in web mode — the stream is a single fetch, nothing to cancel
+        result = { ok: true };
+        break;
+
+      case 'voice:ensureMicAccess':
+        // WEB-ONLY: mic permission is handled by the browser via getUserMedia
+        result = { granted: true };
+        break;
+
+      case 'voice:ensureCameraAccess':
+        // WEB-ONLY: camera permission is handled by the browser via getUserMedia
+        result = { granted: true };
+        break;
+
       // Meeting channels
       case 'meeting:summarize':
         const notes = await summarizeMeeting(validatedArgs.transcript, validatedArgs.meetingStartTime, validatedArgs.calendarEventJson);
@@ -1675,9 +2726,20 @@ async function handleInvoke(ws: WebSocket, message: any) {
         break;
         
       case 'oauth:getState': {
-        const oauthRepo = container.resolve('oauthRepo');
-        const config = await oauthRepo.getClientFacingConfig();
-        result = { config };
+        // WEB-ONLY: In web mode, "rowboat connected" = user is signed in via
+        // Worker JWT. This is what unlocks voice/video calls (the renderer
+        // checks oauthState.config.rowboat.connected to decide whether the
+        // SaaS Deepgram/ElevenLabs voice path is available).
+        const workerToken = clientAuthTokens.get(ws) || '';
+        console.log('[oauth:getState] workerToken:', !!workerToken, 'connected:', !!workerToken);
+        result = {
+          config: {
+            rowboat: { connected: !!workerToken },
+            google: { connected: false },
+            granola: { connected: false },
+            slack: { connected: false },
+          },
+        };
         break;
       }
         
@@ -1743,7 +2805,7 @@ async function handleInvoke(ws: WebSocket, message: any) {
         
       // Channels channels
       case 'channels:getConfig':
-        result = container.resolve('channelsConfigRepo').getConfig();
+        result = await container.resolve('channelsConfigRepo').getConfig();
         break;
         
       case 'channels:setConfig':
@@ -1996,46 +3058,56 @@ async function handleInvoke(ws: WebSocket, message: any) {
         result = { success: true };
         break;
         
-      // Composio channels
+      // Composio channels — real implementation via Composio API
       case 'composio:is-configured':
-        result = { configured: false }; // stub
+        result = { configured: !!process.env.COMPOSIO_API_KEY };
         break;
         
       case 'composio:set-api-key':
-        result = { success: false, error: 'Not implemented' };
+        result = { success: false, error: 'API key is managed server-side for the web app.' };
         break;
         
-      case 'composio:initiate-connection':
-        result = { success: false, error: 'Not implemented' };
+      case 'composio:initiate-connection': {
+        const { toolkitSlug } = args as { toolkitSlug: string };
+        result = await initiateComposioConnection(toolkitSlug, userId!);
         break;
+      }
         
-      case 'composio:get-connection-status':
-        result = { success: false, error: 'Not implemented' };
+      case 'composio:get-connection-status': {
+        const { toolkitSlug } = args as { toolkitSlug: string };
+        result = await getComposioConnectionStatus(toolkitSlug, userId!);
         break;
+      }
         
-      case 'composio:sync-connection':
-        result = { success: false, error: 'Not implemented' };
+      case 'composio:sync-connection': {
+        const { connectedAccountId, toolkitSlug } = args as { connectedAccountId: string; toolkitSlug: string };
+        result = await syncComposioConnection(connectedAccountId, toolkitSlug, userId!);
         break;
+      }
         
-      case 'composio:disconnect':
-        result = { success: false, error: 'Not implemented' };
+      case 'composio:disconnect': {
+        const { toolkitSlug } = args as { toolkitSlug: string };
+        result = await disconnectComposio(toolkitSlug, userId!);
         break;
+      }
         
       case 'composio:list-connected':
-        result = { connected: [] };
+        result = await listConnectedComposio(userId!);
         break;
         
       case 'composio:list-toolkits':
-        result = { toolkits: [] };
+        result = await listComposioToolkits();
         break;
         
       case 'composio:execute-tool':
-        result = { success: false, error: 'Not implemented' };
+        result = { success: false, error: 'Tool execution is handled by the AI runtime directly.' };
         break;
         
-      case 'composio:search-tools':
-        result = { tools: [] };
+      case 'composio:search-tools': {
+        const { query } = args as { query: string };
+        result = await searchComposioTools(query || '');
         break;
+      }
         
       // Migration channels
       case 'migration:check-composio-google':
@@ -2302,6 +3374,191 @@ async function handleInvoke(ws: WebSocket, message: any) {
         result = { ok: true };
         break;
         
+      // ── Browser channels (CDP-backed cloud browser) ──────────────
+      case 'browser:getState': {
+        result = cdpBrowser.getBrowserState();
+        break;
+      }
+      case 'browser:newTab': {
+        result = await cdpBrowser.newTab(validatedArgs.url);
+        broadcastToSubscribers('browser:didUpdateState', cdpBrowser.getBrowserState());
+        break;
+      }
+      case 'browser:switchTab': {
+        result = cdpBrowser.switchTab(validatedArgs.tabId);
+        broadcastToSubscribers('browser:didUpdateState', cdpBrowser.getBrowserState());
+        break;
+      }
+      case 'browser:closeTab': {
+        result = cdpBrowser.closeTab(validatedArgs.tabId);
+        broadcastToSubscribers('browser:didUpdateState', cdpBrowser.getBrowserState());
+        break;
+      }
+      case 'browser:navigate': {
+        // Agentic cookie restore: before navigating, try to restore
+        // any saved cookies for the destination domain so the AI
+        // doesn't hit a login wall unnecessarily.
+        try {
+          const destUrl = validatedArgs.url;
+          let destDomain = '';
+          try { destDomain = new URL(destUrl).hostname.replace(/^www\./, ''); } catch {}
+          const uid = wsToUserId.get(ws);
+          if (destDomain && uid) {
+            const sessionRepo = new BrowserSessionRepo(uid);
+            const savedCookies = await sessionRepo.getSessionCookies(destDomain);
+            if (savedCookies && savedCookies.length > 0) {
+              await cdpBrowser.setCookies(savedCookies);
+              console.log(`[browser] Restored ${savedCookies.length} cookies for ${destDomain}`);
+            }
+          }
+        } catch (e) {
+          // Non-fatal — continue navigation even if cookie restore fails
+          console.error('[browser] Cookie restore failed:', e);
+        }
+
+        result = await cdpBrowser.navigate(validatedArgs.url);
+        broadcastToSubscribers('browser:didUpdateState', cdpBrowser.getBrowserState());
+
+        // Agentic login-wall detection: after navigation, check if the
+        // page looks like a login wall. If so, push a login-required
+        // event to all connected clients for this user.
+        try {
+          const wallCheck = await cdpBrowser.detectLoginWall();
+          if (wallCheck.needsLogin && wallCheck.loginUrl) {
+            const loginData = {
+              url: wallCheck.loginUrl,
+              domain: wallCheck.domain,
+              reason: wallCheck.reason || `Login required for ${wallCheck.domain}`,
+              timestamp: Date.now(),
+            };
+            // Push to all clients — the BrowserLoginCard component picks this up
+            broadcastToSubscribers('browser:loginRequired', loginData);
+            console.log(`[browser] Login wall detected for ${wallCheck.domain}`);
+          }
+        } catch (e) {
+          // Non-fatal — login detection is a nice-to-have
+          console.error('[browser] Login wall detection failed:', e);
+        }
+        break;
+      }
+      case 'browser:back': {
+        result = await cdpBrowser.back();
+        broadcastToSubscribers('browser:didUpdateState', cdpBrowser.getBrowserState());
+        break;
+      }
+      case 'browser:forward': {
+        result = await cdpBrowser.forward();
+        broadcastToSubscribers('browser:didUpdateState', cdpBrowser.getBrowserState());
+        break;
+      }
+      case 'browser:reload': {
+        result = await cdpBrowser.reload();
+        broadcastToSubscribers('browser:didUpdateState', cdpBrowser.getBrowserState());
+        break;
+      }
+      case 'browser:readPage': {
+        result = await cdpBrowser.execute({ action: 'read-page' }, { signal: undefined });
+        break;
+      }
+
+      // ── Browser Session Management (agentic cookie persistence) ──
+      case 'browser:getSessions': {
+        const uid = wsToUserId.get(ws);
+        if (!uid) { result = { error: 'Not authenticated' }; break; }
+        const repo = new BrowserSessionRepo(uid);
+        result = { sessions: await repo.getSessions() };
+        break;
+      }
+      case 'browser:saveSession': {
+        const uid = wsToUserId.get(ws);
+        if (!uid) { result = { error: 'Not authenticated' }; break; }
+        const domain = validatedArgs.domain;
+        // Get cookies from CDP for this domain
+        const cookies = await cdpBrowser.getCookies(domain);
+        const repo = new BrowserSessionRepo(uid);
+        await repo.saveSession(domain, cookies, {
+          lastUrl: validatedArgs.lastUrl,
+          lastTitle: validatedArgs.lastTitle,
+          faviconUrl: validatedArgs.faviconUrl,
+        });
+        result = { ok: true, cookieCount: cookies.length };
+        break;
+      }
+      case 'browser:restoreSession': {
+        const uid = wsToUserId.get(ws);
+        if (!uid) { result = { error: 'Not authenticated' }; break; }
+        const domain = validatedArgs.domain;
+        const repo = new BrowserSessionRepo(uid);
+        const cookies = await repo.getSessionCookies(domain);
+        if (cookies.length > 0) {
+          await cdpBrowser.setCookies(cookies);
+          result = { ok: true, restored: cookies.length };
+        } else {
+          result = { ok: true, restored: 0 };
+        }
+        break;
+      }
+      case 'browser:deleteSession': {
+        const uid = wsToUserId.get(ws);
+        if (!uid) { result = { error: 'Not authenticated' }; break; }
+        const domain = validatedArgs.domain;
+        // Also clear from browser
+        await cdpBrowser.clearSiteCookies(domain);
+        const repo = new BrowserSessionRepo(uid);
+        await repo.deleteSession(domain);
+        result = { ok: true };
+        break;
+      }
+      case 'browser:getCookies': {
+        const domain = validatedArgs.domain;
+        result = { cookies: await cdpBrowser.getCookies(domain) };
+        break;
+      }
+      case 'browser:loginToSite': {
+        // Navigate to a login URL, then let the user authenticate via the
+        // login card in chat. After auth, cookies are captured + saved.
+        const loginUrl = validatedArgs.url;
+        await cdpBrowser.navigate(loginUrl);
+        const state = cdpBrowser.getBrowserState();
+        const activeTab = state.tabs?.find((t: any) => t.id === state.activeTabId);
+        result = {
+          ok: true,
+          url: loginUrl,
+          title: activeTab?.title || '',
+          faviconUrl: activeTab?.faviconUrl || '',
+        };
+        break;
+      }
+      case 'browser:captureAndSave': {
+        // After user logs in via login card, capture cookies + save to DB
+        const uid = wsToUserId.get(ws);
+        if (!uid) { result = { error: 'Not authenticated' }; break; }
+        const domain = validatedArgs.domain;
+        const cookies = await cdpBrowser.getCookies(domain);
+        const state = cdpBrowser.getBrowserState();
+        const activeTab = state.tabs?.find((t: any) => t.id === state.activeTabId);
+        const repo = new BrowserSessionRepo(uid);
+        await repo.saveSession(domain, cookies, {
+          lastUrl: activeTab?.url,
+          lastTitle: activeTab?.title,
+          faviconUrl: activeTab?.faviconUrl,
+        });
+        result = { ok: true, cookieCount: cookies.length };
+        break;
+      }
+
+      // turns:subscribe / turns:unsubscribe — no-op in web-bridge mode.
+      // Durable turn events are already broadcast via the turnEventBus →
+      // broadcastToUserClients(userId, 'turns:events', event) listener set
+      // up in ensureUserSessionsLoaded(). These channels exist only in the
+      // Electron desktop app where the main process forwards SSE deltas
+      // to the renderer for live token streaming. In web mode, all events
+      // arrive through the WebSocket 'turns:events' channel directly.
+      case 'turns:subscribe':
+      case 'turns:unsubscribe':
+        result = { ok: true };
+        break;
+
       // Default case for unimplemented channels
       default:
         console.warn(`Unhandled IPC channel: ${channel}`);

@@ -173,8 +173,11 @@ export function BrowserPane({ onClose, forceHidden = false }: BrowserPaneProps) 
   const activeTabIdRef = useRef<string | null>(null)
   const addressFocusedRef = useRef(false)
   const viewportRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const lastBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null)
   const viewVisibleRef = useRef(false)
+
+  const isWebMode = typeof window !== 'undefined' && (window as any).isWeb === true
 
   const activeTab = getActiveTab(state)
 
@@ -200,6 +203,136 @@ export function BrowserPane({ onClose, forceHidden = false }: BrowserPaneProps) 
 
     return cleanup
   }, [applyState])
+
+  // ── Web mode: cloud browser screencast + input forwarding ────────
+  useEffect(() => {
+    if (!isWebMode) return
+    const browserStream = (window as any).browserStream
+    if (!browserStream) return
+
+    // Start receiving screencast frames
+    browserStream.startScreencast()
+
+    // Draw each frame onto the canvas
+    const offscreenFrame = new Image()
+    const drawFrame = (dataUrl: string) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      offscreenFrame.onload = () => {
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        // Resize canvas to match the frame if needed
+        if (canvas.width !== offscreenFrame.naturalWidth || canvas.height !== offscreenFrame.naturalHeight) {
+          canvas.width = offscreenFrame.naturalWidth
+          canvas.height = offscreenFrame.naturalHeight
+        }
+        ctx.drawImage(offscreenFrame, 0, 0)
+      }
+      offscreenFrame.src = dataUrl
+    }
+    const offFrame = browserStream.onFrame(drawFrame)
+
+    return () => {
+      offFrame()
+      browserStream.stopScreencast()
+    }
+  }, [isWebMode])
+
+  // ── Web mode: forward mouse + keyboard input to CDP ──────────────
+  useEffect(() => {
+    if (!isWebMode) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const browserStream = (window as any).browserStream
+    if (!browserStream) return
+
+    const getScaledCoords = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      const scaleX = canvas.width / rect.width
+      const scaleY = canvas.height / rect.height
+      return {
+        x: Math.round((e.clientX - rect.left) * scaleX),
+        y: Math.round((e.clientY - rect.top) * scaleY),
+      }
+    }
+
+    const onMouseMove = (e: MouseEvent) => {
+      const { x, y } = getScaledCoords(e)
+      browserStream.sendInput({ type: 'mouseMoved', x, y, button: 'none' })
+    }
+    const onMouseDown = (e: MouseEvent) => {
+      e.preventDefault()
+      const { x, y } = getScaledCoords(e)
+      const button = e.button === 0 ? 'left' : e.button === 1 ? 'middle' : 'right'
+      browserStream.sendInput({ type: 'mousePressed', x, y, button, clickCount: 1 })
+    }
+    const onMouseUp = (e: MouseEvent) => {
+      e.preventDefault()
+      const { x, y } = getScaledCoords(e)
+      const button = e.button === 0 ? 'left' : e.button === 1 ? 'middle' : 'right'
+      browserStream.sendInput({ type: 'mouseReleased', x, y, button, clickCount: 1 })
+    }
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const { x, y } = getScaledCoords(e)
+      browserStream.sendInput({
+        type: 'mouseWheel',
+        x, y,
+        deltaX: Math.round(e.deltaX),
+        deltaY: Math.round(e.deltaY),
+      })
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept address bar typing
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      e.preventDefault()
+      browserStream.sendInput({
+        type: 'keyDown',
+        key: e.key,
+        code: e.code,
+        modifiers: {
+          alt: e.altKey,
+          ctrl: e.ctrlKey,
+          meta: e.metaKey,
+          shift: e.shiftKey,
+        },
+      })
+    }
+    const onKeyUp = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      e.preventDefault()
+      browserStream.sendInput({
+        type: 'keyUp',
+        key: e.key,
+        code: e.code,
+        modifiers: {
+          alt: e.altKey,
+          ctrl: e.ctrlKey,
+          meta: e.metaKey,
+          shift: e.shiftKey,
+        },
+      })
+    }
+
+    canvas.addEventListener('mousemove', onMouseMove)
+    canvas.addEventListener('mousedown', onMouseDown)
+    canvas.addEventListener('mouseup', onMouseUp)
+    canvas.addEventListener('wheel', onWheel, { passive: false })
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault())
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+
+    return () => {
+      canvas.removeEventListener('mousemove', onMouseMove)
+      canvas.removeEventListener('mousedown', onMouseDown)
+      canvas.removeEventListener('mouseup', onMouseUp)
+      canvas.removeEventListener('wheel', onWheel)
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [isWebMode])
 
   // Mirror of authQueue for the unmount handler, which must read the latest
   // queue without re-subscribing on every change.
@@ -247,12 +380,14 @@ export function BrowserPane({ onClose, forceHidden = false }: BrowserPaneProps) 
   const activeAuthRequest = authQueue[0] ?? null
 
   const setViewVisible = useCallback((visible: boolean) => {
+    if (isWebMode) return // no native overlay in web mode — canvas IS the view
     if (viewVisibleRef.current === visible) return
     viewVisibleRef.current = visible
     void window.ipc.invoke('browser:setVisible', { visible })
-  }, [])
+  }, [isWebMode])
 
   const measureBounds = useCallback(() => {
+    if (isWebMode) return null // no bounds to measure in web mode
     const el = viewportRef.current
     if (!el) return null
 
@@ -301,6 +436,7 @@ export function BrowserPane({ onClose, forceHidden = false }: BrowserPaneProps) 
   }, [])
 
   const syncView = useCallback(() => {
+    if (isWebMode) return null // web mode: canvas is always visible, no overlay to sync
     if (forceHidden) {
       lastBoundsRef.current = null
       setViewVisible(false)
@@ -323,7 +459,7 @@ export function BrowserPane({ onClose, forceHidden = false }: BrowserPaneProps) 
     pushBounds(bounds)
     setViewVisible(true)
     return bounds
-  }, [forceHidden, measureBounds, pushBounds, setViewVisible])
+  }, [isWebMode, forceHidden, measureBounds, pushBounds, setViewVisible])
 
   useEffect(() => {
     syncView()
@@ -562,7 +698,15 @@ export function BrowserPane({ onClose, forceHidden = false }: BrowserPaneProps) 
         ref={viewportRef}
         className="relative min-h-0 min-w-0 flex-1"
         data-browser-viewport
-      />
+      >
+        {isWebMode && (
+          <canvas
+            ref={canvasRef}
+            className="h-full w-full"
+            style={{ imageRendering: 'auto', cursor: 'default' }}
+          />
+        )}
+      </div>
 
       {activeAuthRequest && (
         <BrowserHttpAuthDialog

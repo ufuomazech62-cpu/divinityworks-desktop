@@ -632,10 +632,10 @@ img, svg { display: block; max-width: 100%; }
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Divinity Works — Your AI Coworker With a Real Memory</title>
-  <meta name="description" content="Divinity is your AI coworker with a real memory. It remembers your work, understands your projects, and helps you get things done across your computer, apps, and the web." />
-  <meta property="og:title" content="Divinity Works — Your AI Coworker With a Real Memory" />
-  <meta property="og:description" content="Your AI coworker with a real memory. It remembers your work, understands your projects, and helps you get things done across your computer, apps, and the web." />
+  <title>Divinity Works — Your AI Coworker</title>
+  <meta name="description" content="Divinity is your AI coworker that grows with you. From everyday tasks to complex projects, it helps you get things done faster and better." />
+  <meta property="og:title" content="Divinity Works — Your AI Coworker" />
+  <meta property="og:description" content="Your AI coworker that grows with you. From everyday tasks to complex projects, it helps you get things done faster and better." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAaiklEQVR4nO2de7AsRX3HP+ecCwSfN7w0RTSiRoT4hgA+SpEYH4gmxlSQ61VTakwiarRMAMtoxYpJgRoNiRoVKAXhaiSoWCIiKjFRMAKGgK+AAb2lqBEvKiCPe87Z/NHzy/T2nd3t7unZ2d3z/VR17Tk7Mz0zvf179K9fIIQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIUTvLPX9AHPOLJffoO8HELPPLFfgWWYFWGe2hWyJ+vcNPwfe54DZfg/RIVIA7dit+gyFbUBz2frfDUZ8t8SwQC4F3/vHm/5fq1IKy1WCWrFJKWwApADSWMYJyFbgeGAzzhtYohagZZoF2Y7b900KwPAFennM8XV2VQA7gTuBu7zPncAPgRuB24Brq/+3AzdV34XYe61XSSwgUgDxmPAfBHyj52cpxW3AzcD/AFcDVwFXAP+NUx7GEnWzR8pggZACiGcF51o/Gfg8zqqu9PpE4wld+LBZ4XstPuvADcClwCXAF4HrgmutLNRMEBsGU5abce7zOrUQpKb1Cd+POl46mUVfxSm0nQ3n3AF8Afgz4MCgTFZoViJCLCRm8d+AE467mI6gTjOZYtuJUwz+sTuBzwB/iFOEfrlIEYiFx9zmewLXU1vPtpY/xkqvR+TThQfhewj+99uBk4GHeOXj9yYIsZCYF/BMnCDsZHouexshLqEYTBn4Su8XwDnA44IykiIQC4spgfdTK4E2Fj8U0NDah/k05TvOQ8gV/HGehjUT/O/PZ1gRbEKBZrGAmKv7y8B3iQsIlvISmhRCyfvmnB96QduAg73ymuXeEiGysEr9FGovYFRbPfYzFPJYj2DU/SZ9P0nJpFwXKoJbgVOAvapyWkbegFgwNlWff0WtBEpY+bYeQhvLXuJ6P0bwHWCLV2byBsTCYINiAD6Lq/DjegViLWpulD/H0nepiHyF+GFg/6qsbJixEHOPubb7Ad/DVfa28YBxx2e9xyFMa9RK8UbgeUHZCTH3mBfwJOo+85h++3FCXmrMQIoSye0ujOl18L2BM4B7VGVmzSgh5hqryK/CVfK7iA+elVYEs5bsHXxv4BrgUUHZCTHXWEV+P8NWLzcKH2uZ2zQp2l6XM/7AhlDfAhxXlZniAmLusaDg7sCX2NX1LWHNpzFhqG1PQEzyg6Vv9spPcQEx11gFvi91UDB2vsCk8QFN5zX118eMM0gR6FjLnuqp+E2C06g9KCkBMbMsM7kv244fBtxOvUzXNKx0isDOQlqnbhJ8BjfRyi9DIWaSSe1Vs2bH4Sp37KShmJF+bZRDl8qnTe+BKYEvAntXZSdPQMwMJvAPAo4JvhuFKYFXU1fyNsI5jfZ/n8mUwJVICYgZw4T5VFwl/ZPq/0muql33TwxX8hwrm9umL9WvX7pp0XS9lc9l1IuOSAmI3jFBPx3Xnv8xsC/DS4I34Q8XPo80JRAjZIswajB8Tus5uRQXE1DvgOgdE+IzqCvq24Njo7AKfHfgywxX8pKWObYXYBpC3DYPU5IXeOWncQKiN8JFQFZxy2o/gDgLZcf3wi3BnaMEYlzw0sLepxdhSuD0quw0YlD0himAD+Aq5e3V5/uD4zF5HICbGGOKJFfoulQAOcOY26w3MGnU4OursrPdmISYKia8Z+EqpK2auwYcHpwTk8+jgR1VXk1jBNpMBurLYneR/HECf5BQzkIUxSrdmdQKwFz4fw/OmYS5so+n3UChaTQBUu/fRX5WPj+j3ptAQUExVZoUwIDahd8SnDcJUwLPwVX8Ndp3182ycLdNVs5fBfZEk4fElAljAKYATHC3A/cmLVptSuCF1JW8zWjB0k2AWVMCVubvDspPiM4xBfBBhiujb53eEZwbgwW1XuzlVWK04KImK/dnZZS1ENlYRdvGrgpgnXoloEOD82MwS3a8l3dK+35SNL7tegBdjPgLv18P0qi8LB7wPWAftBuRmBIm0GezqwIYUHsBl1HPGExpo5oSeK2Xf25PQNdWeNwiINNIVvbnVGUmL0B0TtgN2NR/bxXzFcE1sZgSeL2X3yy69H1PN16nLuujqzKTEhCdMq4J4FfMNdxSV79G3hh2UwIneveZRSXQd7Lg67dxQ6w1VFh0SpMCaBJM8ww+HlyXgimBE0bcq6mdHOOWl14BKPb83NjFpPNMCb+pKi95AaIzrHJ9iGFBb0pWMbcG16ZgSuDPvfuVXlUoN/XtkfjByVXcNmQPRLMGRYeECmDcRB6LVP8It2FIbqTalMArqZVA34HBPqYfj5vdaL/D2VVZyQsQnWAV61xqYRxXae24VczcQSt23csYVi59WuBZSzlzMoRIwirVRxi2PDFK4Jggj1RMCWylbv9vZCUwagGRC6tykgIQxbFK9S/EKwB/0MretBu0YiMGnwvcwbCC2YgpDHpar4C8ANEJOQrAP88GrbQZv27XHgncHOSf0v4uNbKvbW9B22dqigWcV5WRgoGiKOG6fimr+ZToFTBMCRwCfD/jWRY1mRewE3hYVUbyAkQxrDJ9lHShs6bAT4D70b67ypTAA3GbbA5IW2h0mkLZxfmjPBD7Td5TlY8UgCiGVaaPka4ABtTt9YuD/No+zz64BUlGKYFFWzNgUjNiHdc82q8qH40OHIPaSenkltkKTgk8BXgNziNoEw9Yq/K8CXgqLjaxG7WiofosJQCDhu+WRhxrOjcm70nXhec1nb+G20/g+dX/8gJEEUzwL2DYoqdar1VcFP9RVX5tK6ivkN5e3aftWIEuFxbt2muw974Gp2DlAYgimKBdSLoC8Cu9XXcV5Za28mMKx3v3C5+xbU/BqKh/7roB4arA4/KPXS/AVwJPrspEXoBojVWiTxGvAEZV1C6Wtlry8nk6rmlg95rnhUJzkpXvmVV5SAGI1uQogHFCYpX0uUH+bTElcDD99RCkRPNzvJJJHocNCrqJepNRNQVEK8zF/jTtFYBfSUt1DfqYEtgL+IT3vLNgnaeV7Pc5LigT4aFegHSaLMkg+Bx13GcZJ5B7US81Pmmj0VhWcR7FDuDZwFuoYw1rBfIfRdN7jiqT1HxizhsEfw+oPayc5xDi/xnlAcQu4z3qmDUF3ljlX9JS+XMPng/8PLjnvKWc5sLNaEyAKIAJ0kUMK4ASFdfc866i1qZUHg5cQa0ESq36O4sKwN5xADwvKAdRoSZAOjnCOcny2PFtwH1xFb3kb7OKq/zXAE/EDZW1PvK1iOfLZVA4v/A5Y/If4HpFYs8XohETyItJ9wBiLJnl98nqPl1YK1+pbMUFIENvYJYtfOo4BBsPcD2wR/XeagaILEx4PkctsKWFxlzWE6t7daEElqi9mF8HPkstPKmjB/tYDjzlmD9w6JDqnTUmQGQRowAmWaiYCm7bjh9R3a+rCusrl5OoxwrExAZij3ehQCatjtxUngPcCMnwvYWIxhSAWcyuIunWFPgmcDe63QXX7yU4DLicWnBimziz0HSIKc+PVO8pD0Bk0eQBxApH6so5plxOre7ZdaU1q/hLwJtp9gZilUHbbtGY81M8FGvWXAvsXr2n4gAimRwFkJt8C/zE6r5dKwE//8OAL3vPM89rD5oyuAN4cPV+6v2qUEGkM5jSfcxKvRMXwR7QreWy7sBNwFeAJwB/AfwMpxxs6HJJplGW1tW5B/AI7zuBFEAOOZUnpaKboC/jLO/DgVfhhK9rL8Csvd37bbjo+TnVvZepXeoStBHE1DIFeGSB+4oNSmoToE1wzK711xLcj+lufeVPLwZ4JnCl94wWH+gzCBh7b/utbMVgBQIr5AGkE2s92lgZu9afMPRqum8G+PjewApuJaQjcNuU/YB6JKEJYR+k/hYPxr1L6aaM2ACYsvw87QNjKeMD/Lnt5gX04cL6VnNf4G+o9ybwPYK+vIGYcv4Jbr1AUDNAJGIK4BLaK4DUZN2CJ1XP0NdgFn8UIcABuCDlrcyHIlil3jNA3q9Iok03YFuBsFGH38L1ZfdtvcL4wENwy5v9lGFF0Hb/wpKKxJ7lt6pnVhwAacFp0VZgV3CV90BcH/2AfiuwKSWLD1wLvBwXZT8Zty36JuoYRm7PQUlFZ+3+B3SQ99wiBZBOTkUugVXgZ1Wfs1CBTbhNEXwXeB1OEZwAfMM7tsTw/Im++JUe7z1zSAGk05fg2W/1VOr++FnBVwSbcB7AW3F7Hzwb1/12G7VXANNTBmH+e3Z8P7GgjIsBpM6aS50t5/e33wrcP3imWSOMEYDbx/AEhscS2LvZDMg14sondhai/7+WChetyFEApdO8bXhhvQbLwXeH4RYqtWXLw4CnBRBzFUFTst/rguo5Zr3spsKsWpBZxtrivms5qVlQys21ez8o8r59Y0rLljjbVH33FZw38EjcUOPXAV/ENRNWqJsKNo7fvAO/VwHylggzz6TPOMTMoMUR0lkKPlOuaYtV2v0L5TdNrBkD9ToEq8BXq3QyrmlzOPAk4PG4Xo+UNntMOcvoeUgBzBdWwfcYe9bsY8rARjVaUHN7lc7FeQL3Bw7CzeJ7JG4DlfsAd8ft+LMb6cp11r2mqSIFkM4sVKB5VwA+vkflu+VrwA24rsX/wg3BfgROIewH/CZuTcNZ+D3mFimAfHLakAPKTIH9RYs8+saf0WjtemMfnIAfWqWH4CbwbB6RV/gbhOXbVN5q+3tIAeSTI8h2TVtFcFeLa/vCD+qZ0O8OPAY4CngKzs3fa8T14ZgBy89n0v+Wj6iQAkinhAUZJfymGJo+/eu+X+AZpoF1A/qrCd0Nt9rQc4EjcVbeJwwW+lOjjVgF6p9nZbjqPduGRwognS4rTtjDEH6aEFxXfc6qOxt24YFbS2ALcAxuFqFhXYXWNLA0TsjbrMlwW+S1GwIpgHQGwWduHr6FH3U8/G4Zt8GnKYBZc2d9wQcXsf9d4AW4bj3DrLyd31QPR5VPaNVjys//rW708t/wSAHkU2LFnxQLZ2sCfgM31j6MmveJeSamkA7GzQ48FhfYg9rS+1Z+Ek3lsDTheNP3/v87Iu67YZACmE3GRa9td+JN1O51X4QW/1Dc0mW/T91VacdshF8Tkzyi8LxYms7/ecL1C48UQDqpVjcn4t90vs2t/1j1f5/uvz94B9xw3hNwgu/P9lshbsx97OjKNuVof19ffc6K99QrUgDzgbnOXwKuplYGfWBR/TWcq38ScBz1OH8T/Jy6lRPdjznP4icA/5vxXELssjfgtJcEGwC/Vz1DHzPZ/HveB3gHbkCS/4yzthZgWP63UC8IoiCgSMIUgLXBUyp86noATXvbXcXwghrTwl8IdAW3y+4PvGedh23DrAyvo45NSAGIJEzwPo2rTDm7A+dsimn3eUZ1/2laf/9eRwKXec8Ws/pvVx5B6rbrpqQuqt5FMwIrVBDxmMVYD/6fhFXCHNZwVv9zwIXU7e+u8Ufw7Q28B7cc+hHUno9tDOITvmfuOPxR54Vl2ZR/07X2m32t+lS9F8mEHkDXrq/tEHwH013L3rf6x+Jm45kbPQ/u/jgPYEv1Xgp+i2RMMD5FngLw1/WLcV3N9f/L4P5d4bf17wdsa3iWrlPbJsO4NRh3Ar9RvZ88AJGMVZoLyVMA4yroKIt1BW7RC1tWuyt85fIC3EhDe462m3tMQ/DHJXv+b6MA4C5IE8YTxgBSGAR5jKuAlv9twIsYtr5dsIm6rX82cBZuwQ3rz5+lOhKWwyD4bDrfyvNK4E7qTVYEagulEApxCinXWIDtlcDX6S7w54/YOwo4HTdLz1/ff1qkzu4bMLxJasycgH9NvJcQQ4QxgJR2cayLa3l+qLpXV0Lou/wnUbvJXbX1S7j4qTEU/5pV1P4XLSkVA/ArcthWXce1Ve9N84o3JTClcj/qQU3hktvznPyytd/o6zR3W254pA3jCWMAg+D4IPh70HDOEsOua3g+wEuAn1F+uq9N4FnFzdH/D9w2Y6vesRya3tM/VpLBiE+fpnUALqaOaQiRhVWeC8j3AEYlc73fUN2jtOvvV/w3efed13792KQtwUUxrPK0aQI0JcvnC9R98SVdVVMm+wKfoBaMNi5/30OAY84Ju//k/jegXoB4Bh3meSvwYoYrcltMmazihvCeg9ugcydubEHbvNsc7+q+/jm25Nj5uO6/WVhARcwxOU2AMGodWjBz/V8a3KMtfpv+RcDtwf1irWxq1L2tRY/dZTnmPAuqHl6Vg9x/0YrcXoBRlbWrLj8/mHeKd7+S7f2+5/3HjqS8ku56U8QGwwSryQMYVyGbuv3MOn0PtxFG7CKZkzArdy/gPGpFk9rez5m2nGLRc+8bex9TrsdX5aGmrmiNCWjuZKCmCnp0lWcJ99Qq+QE4y2f36dNa93FvU7g3Ua9ILA9AtCaMAeSOBDTFcVqVXwnrZHk8Frfu/QC3fVjXAl1q9l5q/pNm/Q2Af6zKRG1/UQSrSJ9kWJBTkrn+NwD3pH371N9UYyt1sG/R+/fHKYY1XNT/oKpcNNhNFMEUgPWlp3oAvnV6WpBnDn6k/0TvPn0Jf1PvQer1uWssWrLy/eeqXGT9RTGsMp2Pq2SpgmaV811VPm1cf9+qvct7npLddn1H+nOe1zysQxhe4ESI1lhl+iiTFUAoPCac23ER+jauvz3HHtSr9tzFrha46z78kool1vqPeydTsOdV5SPXXxTFBO/jTFYAoyrnMUFeuc+wGTd02M97nlOKkhqlQFZxbf+DaTe5SYhGQg9glOCN6pNu2y61634VuLzK0yL96w2phEDmjPnPacunzu8Pr7cyfm9QVkIUwyrVx4i3vDbp5qfA/uRbJosXHIzb2y72/rlWto+Uq7isjH+M27Go1KAqIYYwBXAukwUwtEx/GuSRggn/ocAPI+7dVghTLHUppZLqcfjnWVm8IigvIYpiwvth4oTQYgSfC65PwSrz43H72vv5jhPWlIBa1xZ6VDMhJ5+m4OoAt3ryJrpfPVlsYEyAz2a0AvAt1CpuZd8Dq+tS3VIT/qNx04X9Cu8LRFP0v5SlLjU2P/e6SXMsVqt0WFVWavuLzrDK9UEmewB27KTqmlS31M4/llroF2XNvlLJAqBvq8pKwi86xSrYBxivAExgryZvUw9brGML9eCWWOHPidqnHE9NXQUerYyvAfbMKGMhkjEFcAajFYA/FPcJwXUxmOV/SZWHjWwbJ1SzHt0vrTDWcGV/J/DojDIWIgsTzvexqwIIo/5nVOfmCP9Lqa3cKMuf2z/f1lK3VUaTxinE9EKY6/+aoNyE6BSraO9lVwVglmkN11W3L2n90Zb3H1MLfxvL3tdcgK69ESvzjwblJkTnWGWzyTfhYhu56/tZvrYoaAnhD6PsuV1xMfnkKICcZoy/yce90VJfYsqYoL6HYYH3K+eXcRUzNigVtvnbCv+8p1Hv7o+o1BZfohdMWN9NrQCswprgPrY6J8b6W7T/hUEek6x6jNVsO6Ivt60/7rw2YxFMwdoSanL9xdSxSvcP1ArA/3xfdTxF+LcyWfi7tKzzkCzo97KqzCT8ohes4v09teCba7oDNxElZrKP5fMcJvfzlx5rX+q6UsN7J11rwv/XQdkJMXWs8p1KrQDM+p8YnDMpj6OAO6gVQKqQ5EyjLWmVU+cF5HQXmvCf6pWdgn6iN0x434GrmCbA1+FGo02KStv1jwNuIU74mwR9XLvaP7+Ewkht65fqfjTh9+f3S/hFr5gA/x2uctoKvMdW349r+9uxQ4Cbq+u6XLxzXtv8vvC/2ys7Cb/oHVMAb6GurNbtN67db8L/UOBHxAl/rkXNnbLbt3Kx57Ym1Tu9spPwi5nAFMBbqV33J1XfjbL+phj2w21THSP8GzH5gdA3eWUq4RczgymAl+Mq6qQ1/iwmcC/gK9U1ZuGmNSuvbbCwVJBx3PFV7/OPvDKV8IuZZDfgGTjBXqK5olp34DJwEa6Cl96qKyVAVzJIV1JZmULcAfx2VXbq6hNzjb9d12m4Cn4n6UJVoj0/aSz/pNGEk0by5T6n396/inp4r4RfzAXjXNQwWDjK8peYnjuPyY+BnAXcIyg3IeaWcGZfuGNPacud22aPvX9svrEzC00Z3kq9UjJoQQ+xAFglfir1BJauLPmkobglJuGUtvr2HJcCj/LKTME+MfeY8B+IC2ilrOMXY9nbWuhS16c+ly3fNcANnHojtZckl18sBBbx34xbpNIs3jSsfl8pRhH46yVcQr1+H2guv1gQ/Ii/bRs+br+ANkIdMwOvtCXP8UT897+R4ba+JvSIhcKE/29xFb4p4j/t9nhs913pe/pezy+AU3BrI4J26xULiLX7f4fa8pew9DHXdR0jSHk+3+KvAduAhzWUkxALgw3zfTBudl/T+v3TtPrTTn5wb4Cz/ttwG5gaivCLhWSJunL/G7X1b2OxR52/HqRRx1Mt/7jhwpOE3u/d2AGcDjzGK58V5O6LBcZc2tczLPw5Aj7rydr2Ya/G1cBrgf2DcpHgi4XGKvhDceP7Ywf7TEvgS4wHWGVXSz/AbXhyJvB0htv1EnyxYbCKfi751n8W0jpOwE3YRwUwf4Br22+hjugb6tJbAPQDxrOEE4rNwHbcOoDrDFu/AdMp05z72Pnj1i7cAXwLF9u4BLgcF+Q0zPKbshBzjoZjprGEG9L6NepNQOaRW3CC/R2cwF8D/CfwTZwS8PGFfm1KzyemhDyANMwL2Bt4GnAAdRn6Ftb+b9ombKXhXPvbv9bPd7nhu6XgfKit8ipuUNKdOIV1F249wu3Az6vPn+IG7DS94wrDMQKxoEgBbGx8xSKB34BIAeRhVrJvRgnrqN/Vzl+fcL0QQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCHEnPB/n2GhzaDXNWoAAAAASUVORK5CYII=" type="image/png" />
@@ -681,30 +681,26 @@ img, svg { display: block; max-width: 100%; }
     <a class="nav__sidebar-link" href="#how">How it works</a>
     <a class="nav__sidebar-link" href="#talk">Talk</a>
     <a class="nav__sidebar-link" href="#why">Why</a>
-    <a class="nav__sidebar-link" href="#download">Desktop app <span class="badge-soon">Soon</span></a>
+    <a class="nav__sidebar-link" href="#download">Get Started</a>
   </aside>
 
   <main>
     <!-- ===== HERO ===== -->
     <section class="hero">
       <div class="hero__inner">
-        <h1 class="hero__title">Your AI coworker with a real memory.</h1>
+        <h1 class="hero__title">Your AI coworker<br>that grows with you.</h1>
         <p class="hero__lede">
-          It remembers your work, understands your projects, and helps you get things done across your computer, apps, and the web.
+          From everyday tasks to complex projects, it helps you get things done faster and better.
         </p>
         <div class="hero__cta">
           <button class="btn btn--primary" id="hero-getstarted" type="button">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
             Get Started
           </button>
-          <a class="btn btn--ghost" href="#download">Download Desktop Agent <span class="badge-soon">Coming Soon</span></a>
+          <a class="btn btn--ghost" href="#how">See How It Works</a>
         </div>
-        <div class="hero__platforms">
-          <span class="hero__platform"><img src="/i/apple.svg" alt="" onerror="this.style.display='none'" /><span>Mac</span></span>
-          <span class="hero__platform-sep">·</span>
-          <span class="hero__platform"><img src="/i/windows.svg" alt="" onerror="this.style.display='none'" /><span>Windows</span></span>
-          <span class="hero__platform-sep">·</span>
-          <span class="hero__platform"><img src="/i/linux.svg" alt="" onerror="this.style.display='none'" /><span>Linux</span></span>
+        <div class="hero__platforms" style="margin-bottom:72px">
+          <span class="hero__platform"><span>No download needed — works in your browser</span></span>
         </div>
 
         <div class="hero__shot" role="img" aria-label="Divinity Works desktop app">
@@ -739,39 +735,39 @@ img, svg { display: block; max-width: 100%; }
     <!-- ===== SURFACES ===== -->
     <section id="surfaces" class="surfaces">
       <div class="section__inner">
-        <p class="section__eyebrow">What's inside</p>
-        <h2 class="section__title">Every surface, one workspace.</h2>
-        <p class="section__lede">Divinity comes with the apps you use to work — all sharing the same memory.</p>
+        <p class="section__eyebrow">What's Inside</p>
+        <h2 class="section__title">Everything your AI coworker needs to get work done.</h2>
+        <p class="section__lede">Divinity brings together the tools your AI uses to think, create, and take action — all working from the same understanding of your work.</p>
         <div class="surfaces__grid">
           <article class="surface">
             <span class="surface__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="6.5" y1="6.5" x2="10.5" y2="10.5"/><line x1="17.5" y1="6.5" x2="13.5" y2="10.5"/><line x1="6.5" y1="17.5" x2="10.5" y2="13.5"/><line x1="17.5" y1="17.5" x2="13.5" y2="13.5"/></svg></span>
-            <h3 class="surface__name">Brain</h3>
-            <p class="surface__desc">A living knowledge graph of your work. Searchable, editable, plain Markdown.</p>
+            <h3 class="surface__name">Knowledge</h3>
+            <p class="surface__desc">Your documents, notes, conversations, and ideas — all organized into one searchable workspace.</p>
           </article>
           <article class="surface">
             <span class="surface__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
             <h3 class="surface__name">Email</h3>
-            <p class="surface__desc">A built-in email client that sorts what matters and drafts replies with your context.</p>
+            <p class="surface__desc">Read, organize, draft, and reply to emails with full awareness of your projects and priorities.</p>
           </article>
           <article class="surface">
             <span class="surface__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
             <h3 class="surface__name">Browser</h3>
-            <p class="surface__desc">An isolated browser the assistant can drive. You log in only to what it should touch.</p>
+            <p class="surface__desc">A private browser your AI can securely operate to complete tasks across the web.</p>
           </article>
           <article class="surface">
             <span class="surface__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
             <h3 class="surface__name">Code mode</h3>
-            <p class="surface__desc">Spin up parallel coding agents with Claude Code or Codex, driven by your full context.</p>
+            <p class="surface__desc">Write code, debug projects, automate workflows, and run multiple coding agents in parallel.</p>
           </article>
           <article class="surface">
             <span class="surface__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></span>
-            <h3 class="surface__name">Meeting notes</h3>
-            <p class="surface__desc">Local transcription of mic and speakers, summarized into Markdown.</p>
+            <h3 class="surface__name">Meetings</h3>
+            <p class="surface__desc">Capture conversations, generate summaries, and turn discussions into actionable tasks.</p>
           </article>
           <article class="surface">
             <span class="surface__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
             <h3 class="surface__name">Apps</h3>
-            <p class="surface__desc">Build your own apps inside Divinity. They get the same memory, tools, and integrations.</p>
+            <p class="surface__desc">Build custom apps and workflows that share the same knowledge, tools, and context.</p>
           </article>
         </div>
       </div>
@@ -781,28 +777,28 @@ img, svg { display: block; max-width: 100%; }
     <section id="how" class="how">
       <div class="section__inner">
         <p class="section__eyebrow">How it works</p>
-        <h2 class="section__title">How Divinity works.</h2>
-        <p class="section__lede">It indexes your work into a living memory, then uses that memory to create, act, and get things done with you.</p>
+        <h2 class="section__title">Your AI grows with every task.</h2>
+        <p class="section__lede">The more you work together, the better it understands your goals, your projects, and how you like to work.</p>
         <div class="how__grid">
           <article class="step">
             <span class="step__num">01</span>
-            <h3 class="step__title">Remembers</h3>
-            <p class="step__desc">Your emails, meetings, files, and conversations are indexed into a living memory on your machine.</p>
+            <h3 class="step__title">Understands</h3>
+            <p class="step__desc">Builds a complete understanding of your work by connecting your emails, documents, meetings, and conversations.</p>
           </article>
           <article class="step">
             <span class="step__num">02</span>
             <h3 class="step__title">Creates</h3>
-            <p class="step__desc">Drafts emails, documents, decks, and research grounded in your real projects and context.</p>
+            <p class="step__desc">Writes emails, documents, research, presentations, code, and more — tailored to your work and your goals.</p>
           </article>
           <article class="step">
             <span class="step__num">03</span>
-            <h3 class="step__title">Acts</h3>
-            <p class="step__desc">Uses its own browser and tools to complete tasks across your apps, forms, and the web.</p>
+            <h3 class="step__title">Takes Action</h3>
+            <p class="step__desc">Uses its own secure workspace to browse the web, complete tasks, run commands, and automate work across your apps.</p>
           </article>
           <article class="step">
             <span class="step__num">04</span>
-            <h3 class="step__title">Learns</h3>
-            <p class="step__desc">Picks up your voice, your projects, and your way of working. Gets sharper the more you use it.</p>
+            <h3 class="step__title">Grows</h3>
+            <p class="step__desc">Learns your preferences, adapts to your workflow, and becomes more helpful every time you work together.</p>
           </article>
         </div>
       </div>
@@ -813,12 +809,12 @@ img, svg { display: block; max-width: 100%; }
       <div class="talk__inner">
         <div class="talk__content">
           <p class="section__eyebrow">Talk</p>
-          <h2 class="section__title">Talk to Divinity like a coworker.</h2>
-          <p class="section__lede">Open a voice or video call with your AI. Speak naturally. Divinity listens, answers, and remembers the whole conversation.</p>
+          <h2 class="section__title">Talk to your AI coworker naturally.</h2>
+          <p class="section__lede">Start a voice or video conversation whenever you need help. Ask questions, brainstorm ideas, delegate work, or collaborate on projects — just like you would with a teammate.</p>
           <ul class="talk__bullets">
-            <li>Voice and video, the way you'd call a coworker.</li>
-            <li>Ask out loud. Get answers in real time.</li>
-            <li>The conversation is indexed into your memory, like everything else.</li>
+            <li>Natural voice and video conversations</li>
+            <li>Real-time answers and collaboration</li>
+            <li>Every conversation helps your AI understand your work better</li>
           </ul>
         </div>
         <div class="talk__visual" aria-hidden="true">
@@ -843,32 +839,32 @@ img, svg { display: block; max-width: 100%; }
     <!-- ===== WHY ===== -->
     <section id="why" class="why">
       <div class="section__inner">
-        <p class="section__eyebrow">Why</p>
-        <h2 class="section__title">Why Divinity.</h2>
+        <p class="section__eyebrow">Why Divinity</p>
+        <h2 class="section__title">Built to help you get more done.</h2>
         <div class="why__grid">
           <div class="why__item">
             <span class="why__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-            <p class="why__text"><strong>Real memory, not search.</strong><span>Your context accumulates. No cold starts, no re-explaining.</span></p>
+            <p class="why__text"><strong>Understands your work</strong><span>Your emails, documents, meetings, and conversations come together into one shared understanding.</span></p>
           </div>
           <div class="why__item">
             <span class="why__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-            <p class="why__text"><strong>It acts, doesn't just answer.</strong><span>Drives a browser, drafts email, runs code, completes tasks.</span></p>
+            <p class="why__text"><strong>Takes action</strong><span>More than answering questions — it browses the web, runs commands, completes workflows, and gets work done.</span></p>
           </div>
           <div class="why__item">
             <span class="why__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-            <p class="why__text"><strong>Yours, on your machine.</strong><span>Everything is plain Markdown you can read, edit, back up, or delete.</span></p>
+            <p class="why__text"><strong>Your private AI workspace</strong><span>Every task runs inside your own secure cloud workspace, giving your AI a safe place to work without using your personal device directly.</span></p>
           </div>
           <div class="why__item">
             <span class="why__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-            <p class="why__text"><strong>Works in the background.</strong><span>Set agents on events or schedules. Wake up to work already done.</span></p>
+            <p class="why__text"><strong>Works while you're away</strong><span>Schedule tasks, automate workflows, and let your AI keep working even when you're offline.</span></p>
           </div>
           <div class="why__item">
             <span class="why__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-            <p class="why__text"><strong>Connects to your stack.</strong><span>Plug into Gmail, Calendar, Slack, GitHub, Notion, Linear, and more.</span></p>
+            <p class="why__text"><strong>Connects with your tools</strong><span>Works with Gmail, Calendar, Slack, GitHub, Notion, Linear, and the apps you already use.</span></p>
           </div>
           <div class="why__item">
             <span class="why__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-            <p class="why__text"><strong>Gets sharper over time.</strong><span>Learns your voice, your projects, your way of working.</span></p>
+            <p class="why__text"><strong>Gets better over time</strong><span>The more you work together, the better it understands your workflow, your priorities, and how you like things done.</span></p>
           </div>
         </div>
       </div>
@@ -877,28 +873,13 @@ img, svg { display: block; max-width: 100%; }
     <!-- ===== DOWNLOAD ===== -->
     <section id="download" class="download">
       <div class="section__inner">
-        <p class="section__eyebrow">Desktop Agent</p>
-        <h2 class="section__title">Download Divinity Desktop. <span class="badge-soon">Coming Soon</span></h2>
-        <p class="section__lede">The desktop agent brings full local power — your files, your browser, your machine. Sign in once, and Divinity works across cloud and desktop.</p>
-
-        <div class="os-grid">
-          <div class="os-card" style="opacity:0.5;cursor:not-allowed">
-            <span class="os-card__icon"><img src="/i/apple.svg" alt="" /></span>
-            <span class="os-card__name">Mac</span>
-            <span class="os-card__meta">Coming Soon</span>
-          </div>
-          <div class="os-card" style="opacity:0.5;cursor:not-allowed">
-            <span class="os-card__icon"><img src="/i/windows.svg" alt="" /></span>
-            <span class="os-card__name">Windows</span>
-            <span class="os-card__meta">Coming Soon</span>
-          </div>
-          <div class="os-card" style="opacity:0.5;cursor:not-allowed">
-            <span class="os-card__icon"><img src="/i/linux.svg" alt="" /></span>
-            <span class="os-card__name">Linux</span>
-            <span class="os-card__meta">Coming Soon</span>
-          </div>
-        </div>
-        <p class="download__platforms">In the meantime, <a href="https://dash.divinityworks.space/signin" style="color:rgba(255,255,255,0.8);text-decoration:underline;text-underline-offset:3px;">use Divinity in your browser →</a></p>
+        <p class="section__eyebrow">Get Started</p>
+        <h2 class="section__title">Start working with your AI coworker</h2>
+        <p class="section__lede">No download needed. Works in your browser. Sign in once and Divinity starts learning your work, building memory, and helping you get things done from day one.</p>
+        <button class="download__primary" onclick="window.location.href='https://dash.divinityworks.space/signin'" style="margin-bottom:0">
+          Get Started Free
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
       </div>
     </section>
   </main>

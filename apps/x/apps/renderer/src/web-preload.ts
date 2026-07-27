@@ -40,6 +40,19 @@
     return localStorage.getItem('dw_access_token') || '';
   })();
 
+  // ── Token expiry check — used to decide if we need to refresh ──
+  function isTokenExpired(token) {
+    try {
+      var parts = token.split('.');
+      if (parts.length !== 3) return true;
+      var payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (payload.exp && Date.now() >= (payload.exp - 30) * 1000) return true;
+      return false;
+    } catch (e) {
+      return true;
+    }
+  }
+
   // ── Token refresh: proactively refresh the access token before it
   // expires. The SaaS Worker issues 15-min access tokens + 30-day
   // refresh tokens. We call /auth/refresh every 14 min to get a fresh
@@ -96,11 +109,33 @@
     }
   });
 
+  // ── Refresh-on-load: if the access token is already expired (e.g.
+  // user closed the tab for >15 min, or VM was restarted), refresh it
+  // BEFORE connecting the WebSocket. This prevents the app from loading
+  // with a stale token that the server will reject. ──
+  var needsRefresh = AUTH_TOKEN && isTokenExpired(AUTH_TOKEN);
+  if (needsRefresh) {
+    console.log('[web-preload] Access token expired on load, refreshing...');
+    refreshTokenNow().then(function (newToken) {
+      if (newToken) {
+        AUTH_TOKEN = newToken;
+        connect(); // connect with the fresh token
+      } else {
+        // Refresh failed — connect with whatever we have; server will
+        // reject if truly invalid, and the auth gate will redirect.
+        connect();
+      }
+    });
+  }
+
   // Pending invoke requests keyed by reqId
   var pending = {};
 
   // Push channel subscribers
   var subscribers = {};
+
+  // Browser screencast frame handlers (for cloud browser)
+  var screencastHandlers = [];
 
   // Connection state
   var ws = null;
@@ -160,6 +195,14 @@
               }
             }
             break;
+          case 'browser:screencast:frame':
+            // CDP screencast frame: base64 JPEG of the browser page
+            if (screencastHandlers.length > 0 && msg.data) {
+              for (var j = 0; j < screencastHandlers.length; j++) {
+                try { screencastHandlers[j](msg.data); } catch (e) { console.error('[web-preload] Screencast handler error:', e); }
+              }
+            }
+            break;
         }
       } catch (e) {
         console.error('[web-preload] Failed to parse message:', e);
@@ -197,8 +240,17 @@
     return 'r' + Date.now().toString(36) + (reqCounter++).toString(36);
   }
 
-  // ── Connect immediately ───────────────────────────────────────────
-  connect();
+  // ── Connect immediately — unless we're waiting for a token refresh ──
+  // If needsRefresh is true, connect() is called from the refreshTokenNow()
+  // .then() callback after the fresh token is obtained.
+  // If AUTH_TOKEN is empty, the user has no stored credentials — redirect
+  // to the sign-in page instead of trying to connect with no token.
+  if (!AUTH_TOKEN) {
+    console.log('[web-preload] No auth token found, redirecting to sign-in...');
+    window.location.href = 'https://dash.divinityworks.space/signin';
+  } else if (!needsRefresh) {
+    connect();
+  }
 
   // ── window.ipc implementation ─────────────────────────────────────
   var ipc = {
@@ -253,9 +305,30 @@
     },
   };
 
+  // ── window.browserStream (cloud browser screencast + input) ──────
+  var browserStream = {
+    startScreencast: function () {
+      send({ type: 'browser:screencast:start' });
+    },
+    stopScreencast: function () {
+      send({ type: 'browser:screencast:stop' });
+    },
+    sendInput: function (input) {
+      send({ type: 'browser:input', input: input });
+    },
+    onFrame: function (handler) {
+      screencastHandlers.push(handler);
+      return function () {
+        var idx = screencastHandlers.indexOf(handler);
+        if (idx >= 0) screencastHandlers.splice(idx, 1);
+      };
+    },
+  };
+
   // ── Inject into window ────────────────────────────────────────────
   window.ipc = ipc;
   window.electronUtils = electronUtils;
+  window.browserStream = browserStream;
   // Flag so renderer code can detect web mode and hide Electron-only UI
   window.isWeb = true;
 })();

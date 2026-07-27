@@ -806,7 +806,7 @@ export function SidebarContentPanel({
           <ActionButton icon={FilePlus} label="New note" onClick={() => knowledgeActions.createNote()} />
           <VoiceNoteButton onNoteCreated={onVoiceNoteCreated} variant="action" />
           {onToggleBrowser && (
-            <ActionButton icon={Globe} label="Run browser task" onClick={onToggleBrowser} />
+            <ActionButton icon={ChromeIcon} label="Run browser task" onClick={onToggleBrowser} />
           )}
         </div>
       </SidebarHeader>
@@ -1310,7 +1310,7 @@ export function SidebarContentPanel({
         open={connectionsSettingsOpen}
         onOpenChange={setConnectionsSettingsOpen}
       />
-      <SyncStatusBar />
+      {typeof window !== 'undefined' && !(window as any).isWeb && <SyncStatusBar />}
       <SidebarRail />
     </Sidebar>
   )
@@ -1564,7 +1564,22 @@ path: ${currentRelativePath}
   )
 }
 
-function ActionButton({ icon: Icon, label, onClick }: { icon: typeof Mic; label: string; onClick: () => void }) {
+/** Chrome logo icon — matches lucide icon interface (accepts className). */
+function ChromeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="11" fill="#fff" />
+      <circle cx="12" cy="12" r="4" fill="#1a73e8" />
+      <path d="M12 1c2.5 0 4.8.9 6.6 2.4l-3.3 5.7c-.9-1.2-2.4-2-4-2H3.4C5.1 4 8.3 1 12 1z" fill="#ea4335" />
+      <path d="M18.6 3.4C21 5.5 22.5 8.6 22.5 12c0 .6-.05 1.2-.15 1.8h-6.6c.3-.7.45-1.5.45-2.3 0-1.5-.6-2.9-1.6-3.9l3.3-5.7z" fill="#fbbc04" />
+      <path d="M3.4 4.5C5.6 2 8.6.5 12 .5L8.7 6.2C7.8 5.4 6.6 4.9 5.3 4.9c-.8 0-1.5.2-2.2.5L3.4 4.5z" fill="#34a853" transform="scale(0.95) translate(0.3 0.3)" />
+      <path d="M1.5 12c0-2.5.9-4.8 2.4-6.6l3.3 5.7c-1 .9-1.6 2.3-1.6 3.9 0 .8.15 1.6.45 2.3H1.65C1.55 14.2 1.5 13.1 1.5 12z" fill="#1a73e8" />
+      <path d="M12 22.5c-3.4 0-6.4-1.5-8.6-3.9l3.3-5.7c1 1.2 2.5 2 4.2 2 1.5 0 2.9-.6 3.9-1.6l3.3 5.7C16.8 21.6 14.5 22.5 12 22.5z" fill="#34a853" />
+    </svg>
+  )
+}
+
+function ActionButton({ icon: Icon, label, onClick }: { icon: React.ComponentType<{ className?: string }>; label: string; onClick: () => void }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>

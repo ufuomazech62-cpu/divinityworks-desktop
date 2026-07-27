@@ -11,9 +11,11 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
   },
   "dependencies": {
-    "ws": "^8.16.0",
     "@x/core": "workspace:*",
-    "@x/shared": "workspace:*"
+    "@x/shared": "workspace:*",
+    "ioredis": "^5.11.1",
+    "pg": "^8.22.0",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.5",
